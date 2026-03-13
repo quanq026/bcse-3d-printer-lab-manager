@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Timer,
   PenLine,
+  Search,
 } from 'lucide-react';
 import { StatusChip } from '../components/StatusChip';
 import { Role } from '../types';
@@ -26,14 +27,18 @@ interface StudentDashboardProps {
   onPageChange: (page: string) => void;
   role: Role;
   currentUser: any;
+  activePage?: string;
 }
 
-export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking, onSelectJob, onPageChange, role, currentUser }) => {
+export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking, onSelectJob, onPageChange, role, currentUser, activePage }) => {
+  const isHistoryPage = activePage === 'history';
   const { t } = useLang();
   const [jobs, setJobs] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [dailyStats, setDailyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyFilter, setHistoryFilter] = useState('all');
 
   useEffect(() => {
     api.getJobs()
@@ -87,7 +92,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
   return (
     <div className="space-y-8">
       {/* Revision Alert */}
-      {needsRevisionJobs.length > 0 && (
+      {!isHistoryPage && needsRevisionJobs.length > 0 && (
         <div className="p-4 rounded-2xl border-2 border-orange-300 flex items-start gap-3" style={{ background: 'linear-gradient(135deg, #fff7ed, #ffedd5)' }}>
           <PenLine size={20} className="text-orange-600 shrink-0 mt-0.5" />
           <div>
@@ -99,21 +104,126 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiCards.map((stat, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className={cn("p-2.5 rounded-xl", stat.bg)}>
-                <stat.icon size={20} className={stat.color} />
+      {/* KPI Cards — hide on history page */}
+      {!isHistoryPage && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {kpiCards.map((stat, i) => (
+            <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <div className={cn("p-2.5 rounded-xl", stat.bg)}>
+                  <stat.icon size={20} className={stat.color} />
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lab</span>
               </div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lab</span>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{stat.label}</p>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{stat.label}</p>
+          ))}
+        </div>
+      )}
+
+      {/* ── History Page: full-width job list with search/filter ── */}
+      {isHistoryPage ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('history')}</h3>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm..."
+                  value={historySearch}
+                  onChange={e => setHistorySearch(e.target.value)}
+                  className="pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56"
+                />
+              </div>
+              <select
+                value={historyFilter}
+                onChange={e => setHistoryFilter(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none"
+              >
+                <option value="all">Tất cả</option>
+                <option value="Submitted">Đã gửi</option>
+                <option value="Approved">Đã duyệt</option>
+                <option value="Printing">Đang in</option>
+                <option value="Done">Hoàn thành</option>
+                <option value="Rejected">Từ chối</option>
+                <option value="Cancelled">Đã hủy</option>
+                <option value="Needs Revision">Cần sửa</option>
+              </select>
+            </div>
           </div>
-        ))}
-      </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+            {loading ? (
+              <div className="flex items-center justify-center py-16 text-slate-400">
+                <Loader2 size={24} className="animate-spin mr-2" />
+                <span className="text-sm">{t('loadingData')}</span>
+              </div>
+            ) : (() => {
+              const filtered = myJobs
+                .filter(j => historyFilter === 'all' || j.status === historyFilter)
+                .filter(j => !historySearch || j.jobName.toLowerCase().includes(historySearch.toLowerCase()) || j.id.toLowerCase().includes(historySearch.toLowerCase()));
+              return filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                  <History size={40} strokeWidth={1} />
+                  <p className="text-sm font-medium">Không có yêu cầu nào</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Job</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{t('printerName')}</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{t('materialType')}</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {filtered.map((job) => (
+                        <tr key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group cursor-pointer" onClick={() => onSelectJob(job.id)}>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-slate-900 dark:text-white">{job.jobName}</span>
+                              <span className="text-[10px] text-slate-400 font-medium uppercase">{job.id}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm text-slate-600 dark:text-slate-300">{job.printerName || t('notAssigned')}</span>
+                              <span className="text-[10px] text-slate-400">{job.slotTime || t('waitingApproval')}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                              <span className="text-sm text-slate-600 dark:text-slate-300">{job.materialType} ({job.color})</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <StatusChip status={job.status as any} />
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onSelectJob(job.id); }}
+                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
+                            >
+                              <ArrowRight size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      ) : (
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Jobs Table */}
@@ -349,6 +459,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
           )}
         </div>
       </div>
+      )}
     </div>
   );
 };

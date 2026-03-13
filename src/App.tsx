@@ -18,6 +18,7 @@ import { AdminSettings } from './pages/AdminSettings';
 import { PricingPage } from './pages/PricingPage';
 import { QueuePage } from './pages/QueuePage';
 import { api } from './lib/api';
+import { ArrowLeft } from 'lucide-react';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -74,11 +75,11 @@ export default function App() {
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':
-        return <StudentDashboard onNewBooking={() => setActivePage('booking')} onSelectJob={navigateToJob} onPageChange={setActivePage} role={role} currentUser={currentUser} />;
+        return <StudentDashboard activePage="dashboard" onNewBooking={() => setActivePage('booking')} onSelectJob={navigateToJob} onPageChange={setActivePage} role={role} currentUser={currentUser} />;
       case 'booking':
         return <BookingWizard onComplete={() => setActivePage('dashboard')} onCancel={() => setActivePage('dashboard')} currentUser={currentUser} />;
       case 'history':
-        return <StudentDashboard onNewBooking={() => setActivePage('booking')} onSelectJob={navigateToJob} onPageChange={setActivePage} role={role} currentUser={currentUser} />;
+        return <StudentDashboard activePage="history" onNewBooking={() => setActivePage('booking')} onSelectJob={navigateToJob} onPageChange={setActivePage} role={role} currentUser={currentUser} />;
       case 'queue':
         return <ModeratorQueue onSelectJob={navigateToJob} />;
       case 'inventory':
@@ -121,10 +122,19 @@ export default function App() {
           onLogout={handleLogout}
           currentUser={currentUser}
         />
-        
+
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-8 sticky top-0 z-10 transition-colors duration-200">
             <div className="flex items-center gap-4">
+              {activePage !== 'dashboard' && (
+                <button
+                  onClick={() => setActivePage('dashboard')}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 text-slate-500 transition-all"
+                  title="Về tổng quan"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+              )}
               <h2 className="text-lg font-semibold capitalize">{activePage.replace('-', ' ')}</h2>
             </div>
             <div className="flex items-center gap-4">

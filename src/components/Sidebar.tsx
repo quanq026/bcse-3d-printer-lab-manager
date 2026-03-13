@@ -51,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activePage, onPageChange
   return (
     <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-screen sticky top-0 transition-colors duration-200">
       <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-3">
+        <button onClick={() => onPageChange('dashboard')} className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"
             style={{ background: 'linear-gradient(135deg, #d97706, #b45309)' }}>
             <PrinterIcon size={22} />
@@ -60,7 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activePage, onPageChange
             <h1 className="font-bold text-slate-900 dark:text-white leading-tight">{t('appName')}</h1>
             <p className="text-[10px] text-slate-500 font-semibold tracking-wider">Lab Manager</p>
           </div>
-        </div>
+        </button>
       </div>
 
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">

@@ -1,33 +1,39 @@
 #!/bin/bash
 # ──────────────────────────────────────────────────────────────
 # EC2 Initial Setup Script — BCSE 3D Lab Manager
-# Run ONCE on a fresh Ubuntu EC2 instance:
+# For Amazon Linux 2023
+# Run ONCE on a fresh EC2 instance:
 #   chmod +x setup-ec2.sh && sudo bash setup-ec2.sh
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-APP_DIR="/home/ubuntu/bcse-3d-lab"
-DATA_DIR="/home/ubuntu/bcse-3d-lab-data"
+APP_DIR="/home/ec2-user/bcse-3d-lab"
+DATA_DIR="/home/ec2-user/bcse-3d-lab-data"
 
 echo "══════════════════════════════════════════"
-echo "  BCSE 3D Lab — EC2 Setup"
+echo "  BCSE 3D Lab — EC2 Setup (AL2023)"
 echo "══════════════════════════════════════════"
 
 # 1. System update
 echo "→ Updating system..."
-apt-get update -y && apt-get upgrade -y
+dnf update -y
 
 # 2. Install Node.js 20 LTS
 echo "→ Installing Node.js 20..."
 if ! command -v node &>/dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  apt-get install -y nodejs
+  dnf install -y nodejs20 nodejs20-npm
+  # If not available via dnf, use nvm
+  if ! command -v node &>/dev/null; then
+    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+    dnf install -y nodejs
+  fi
 fi
 echo "  Node: $(node -v) | npm: $(npm -v)"
 
-# 3. Install build tools (needed for better-sqlite3)
+# 3. Install build tools (needed for better-sqlite3 native compilation)
 echo "→ Installing build essentials..."
-apt-get install -y build-essential python3
+dnf groupinstall -y "Development Tools"
+dnf install -y python3 make gcc gcc-c++
 
 # 4. Install PM2 globally
 echo "→ Installing PM2..."
@@ -35,11 +41,11 @@ npm install -g pm2
 
 # 5. Install Nginx
 echo "→ Installing Nginx..."
-apt-get install -y nginx
+dnf install -y nginx
 
 # 6. Configure Nginx reverse proxy
 echo "→ Configuring Nginx..."
-cat > /etc/nginx/sites-available/bcse-3d-lab <<'NGINX'
+cat > /etc/nginx/conf.d/bcse-3d-lab.conf <<'NGINX'
 server {
     listen 80;
     server_name _;
@@ -61,8 +67,6 @@ server {
 }
 NGINX
 
-ln -sf /etc/nginx/sites-available/bcse-3d-lab /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 systemctl enable nginx
 
@@ -71,32 +75,29 @@ echo "→ Creating directories..."
 mkdir -p "$APP_DIR"
 mkdir -p "$DATA_DIR/uploads"
 mkdir -p "$DATA_DIR/printer-images"
-chown -R ubuntu:ubuntu "$APP_DIR" "$DATA_DIR"
+chown -R ec2-user:ec2-user "$APP_DIR" "$DATA_DIR"
 
 # 8. Create .env file (template)
 if [ ! -f "$APP_DIR/.env" ]; then
+  PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "YOUR_EC2_IP")
   cat > "$APP_DIR/.env" <<ENV
 PORT=3000
 NODE_ENV=production
 JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")
 DATA_DIR=$DATA_DIR
-ALLOWED_ORIGINS=http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "YOUR_EC2_IP")
+ALLOWED_ORIGINS=http://$PUBLIC_IP
 LOG_LEVEL=info
 ENV
-  chown ubuntu:ubuntu "$APP_DIR/.env"
+  chown ec2-user:ec2-user "$APP_DIR/.env"
   echo "  Created .env with generated JWT_SECRET"
 fi
 
 # 9. PM2 startup (auto-start on reboot)
 echo "→ Setting up PM2 startup..."
-env PATH=$PATH:/usr/bin pm2 startup systemd -u ubuntu --hp /home/ubuntu
+env PATH=$PATH:/usr/bin pm2 startup systemd -u ec2-user --hp /home/ec2-user
 
-# 10. Firewall
-echo "→ Configuring firewall..."
-ufw allow 22/tcp
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw --force enable
+# 10. Install git if not present
+dnf install -y git
 
 echo ""
 echo "══════════════════════════════════════════"

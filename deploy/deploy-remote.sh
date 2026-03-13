@@ -5,7 +5,7 @@
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-APP_DIR="/home/ubuntu/bcse-3d-lab"
+APP_DIR="/home/ec2-user/bcse-3d-lab"
 
 echo "→ Extracting package..."
 cd "$APP_DIR"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, RefreshCw, Loader2, User, ShieldCheck, Crown } from 'lucide-react';
 import { api } from '../lib/api';
 import { cn } from '../lib/utils';
@@ -55,7 +55,9 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
     });
 
     intervalRef.current = setInterval(fetchMessages, 15000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
     setSending(true);
     try {
       const msg = await api.sendMessage(content.trim(), jobId || undefined);
-      setMessages(prev => [...prev, msg]);
+      setMessages((prev) => [...prev, msg]);
       setContent('');
     } catch (err: any) {
       alert(err.message);
@@ -84,78 +86,81 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-120px)]">
-      <div className="flex items-center justify-between mb-4">
+    <div className="mx-auto flex h-[calc(100dvh-120px)] max-w-4xl flex-col">
+      <div className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
             <MessageCircle size={24} className="text-blue-600" />
             Cộng đồng & Nhắc đơn
           </h2>
           <p className="text-sm text-slate-500">Gửi tin nhắn, nhắc nhở phê duyệt, hoặc hỏi về trạng thái yêu cầu in.</p>
         </div>
         <button
-          onClick={() => { setLoading(true); fetchMessages().finally(() => setLoading(false)); }}
-          className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+          onClick={() => {
+            setLoading(true);
+            fetchMessages().finally(() => setLoading(false));
+          }}
+          className="self-start rounded-lg p-2 text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20"
           title="Làm mới"
         >
           <RefreshCw size={18} />
         </button>
       </div>
 
-      {/* Messages list */}
-      <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 min-h-0">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:rounded-2xl sm:p-4">
         {loading ? (
-          <div className="flex items-center justify-center h-full text-slate-400">
-            <Loader2 size={24} className="animate-spin mr-2" />
+          <div className="flex h-full items-center justify-center text-slate-400">
+            <Loader2 size={24} className="mr-2 animate-spin" />
             <span>Đang tải tin nhắn...</span>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
             <MessageCircle size={40} className="opacity-30" />
-            <p className="text-sm">Chưa có tin nhắn nào. Hãy là người đầu tiên!</p>
+            <p className="text-sm">Chưa có tin nhắn nào. Hãy là người đầu tiên.</p>
           </div>
         ) : (
-          messages.map(msg => {
+          messages.map((msg) => {
             const isMe = msg.userId === currentUser?.id;
             const badge = ROLE_BADGE[msg.userRole] || ROLE_BADGE.Student;
             const BadgeIcon = badge.icon;
             return (
               <div key={msg.id} className={cn('flex gap-3', isMe && 'flex-row-reverse')}>
-                {/* Avatar */}
-                <div className={cn(
-                  'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0',
-                  isMe
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                )}>
+                <div
+                  className={cn(
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+                    isMe
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                  )}
+                >
                   {msg.userName.charAt(0).toUpperCase()}
                 </div>
 
-                <div className={cn('max-w-[75%] space-y-1', isMe && 'items-end flex flex-col')}>
-                  {/* Header */}
-                  <div className={cn('flex items-center gap-2 text-xs', isMe && 'flex-row-reverse')}>
+                <div className={cn('max-w-[88%] space-y-1 sm:max-w-[75%]', isMe && 'flex flex-col items-end')}>
+                  <div className={cn('flex flex-wrap items-center gap-2 text-xs', isMe && 'flex-row-reverse')}>
                     <span className="font-semibold text-slate-700 dark:text-slate-200">
                       {isMe ? 'Bạn' : msg.userName}
                     </span>
-                    <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1', badge.color)}>
+                    <span className={cn('flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold', badge.color)}>
                       <BadgeIcon size={10} />
                       {badge.label}
                     </span>
                     {msg.jobId && (
-                      <span className="px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded text-[10px] font-bold">
+                      <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
                         #{msg.jobId}
                       </span>
                     )}
                     <span className="text-slate-400">{formatTime(msg.createdAt)}</span>
                   </div>
 
-                  {/* Bubble */}
-                  <div className={cn(
-                    'px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words',
-                    isMe
-                      ? 'bg-blue-600 text-white rounded-tr-sm'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-tl-sm'
-                  )}>
+                  <div
+                    className={cn(
+                      'whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+                      isMe
+                        ? 'rounded-tr-sm bg-blue-600 text-white'
+                        : 'rounded-tl-sm bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100'
+                    )}
+                  >
                     {msg.content}
                   </div>
                 </div>
@@ -166,37 +171,34 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input area */}
-      <div className="mt-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-3">
-        {/* Job tag */}
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">Nhắc đơn #</label>
+      <div className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 sm:rounded-2xl sm:p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <label className="whitespace-nowrap text-xs font-semibold text-slate-500">Nhắc đơn #</label>
           <select
             value={jobId}
-            onChange={e => setJobId(e.target.value)}
-            className="flex-1 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-300"
+            onChange={(e) => setJobId(e.target.value)}
+            className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
           >
             <option value="">-- Không gắn đơn --</option>
-            {jobs.map(j => (
+            {jobs.map((j) => (
               <option key={j.id} value={j.id}>{j.id} – {j.jobName} ({j.status})</option>
             ))}
           </select>
         </div>
 
-        {/* Text input */}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <textarea
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={2}
             placeholder="Nhập tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"
-            className="flex-1 px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 resize-none text-slate-900 dark:text-slate-100 placeholder-slate-400"
+            className="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
           <button
             onClick={handleSend}
             disabled={sending || !content.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-2 self-end"
+            className="flex min-h-11 items-center justify-center gap-2 self-stretch rounded-xl bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:opacity-50 sm:self-end"
           >
             {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </button>

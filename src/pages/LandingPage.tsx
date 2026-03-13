@@ -100,7 +100,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row" style={{ background: '#fdf8f0' }}>
       {/* ── Left: Hero ─────────────────────────────────────────────────── */}
-      <div className="flex-1 relative flex flex-col justify-between p-10 md:p-14 overflow-hidden"
+      <div className="flex-1 relative flex flex-col justify-between p-6 sm:p-10 md:p-14 overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #1c1917 0%, #292524 60%, #1c1917 100%)' }}>
         <FloatingShapes />
 
@@ -110,7 +110,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="flex items-center gap-3 mb-14"
+            className="flex items-center gap-3 mb-10 sm:mb-14"
           >
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl"
               style={{ background: 'linear-gradient(135deg, #d97706, #b45309)' }}>
@@ -137,11 +137,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
             <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3" style={{ color: '#d97706' }}>
               Hệ thống quản lý
             </p>
-            <h2 className="text-4xl md:text-5xl font-black leading-tight mb-6 text-white" style={{ fontFamily: 'Georgia, serif' }}>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-6 text-white" style={{ fontFamily: 'Georgia, serif' }}>
               {t('heroTitle')} <br />
               <span style={{ color: '#d97706' }}>{t('heroHighlight')}</span>
             </h2>
-            <p className="text-base leading-relaxed max-w-sm" style={{ color: '#a8a29e' }}>
+            <p className="text-sm sm:text-base leading-relaxed max-w-md" style={{ color: '#a8a29e' }}>
               {t('heroDesc')}
             </p>
           </motion.div>
@@ -209,11 +209,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       </div>
 
       {/* ── Right: Auth form ────────────────────────────────────────────── */}
-      <div className="w-full md:w-[480px] flex flex-col justify-center p-8 md:p-12 relative"
-        style={{ background: '#fffbf5', borderLeft: '1px solid #e7e0d6' }}>
+      <div className="w-full md:w-[480px] flex flex-col justify-center p-5 sm:p-8 md:p-12 relative border-t md:border-t-0 md:border-l"
+        style={{ background: '#fffbf5', borderColor: '#e7e0d6' }}>
 
         {/* Top bar: Lang toggle */}
-        <div className="absolute top-6 right-6 flex items-center gap-3">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-3">
           <button
             onClick={() => setLang(lang === 'VN' ? 'JP' : 'VN')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all hover:bg-amber-50"
@@ -224,7 +224,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           </button>
         </div>
 
-        <div className="max-w-sm mx-auto w-full">
+        <div className="max-w-md mx-auto w-full pt-10 sm:pt-0">
           {/* Header */}
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
             <div className="w-10 h-1 rounded-full bg-amber-500 mb-4" />
@@ -298,7 +298,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           {/* ── Register form ── */}
           {tab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label={t('fullName')}>
                   <input type="text" placeholder="Nguyễn Văn A" required value={fullName} onChange={e => setFullName(e.target.value)} className="auth-input" />
                 </Field>
@@ -392,3 +392,4 @@ function SubmitBtn({ loading, label, disabled = false }: { loading: boolean; lab
     </button>
   );
 }
+

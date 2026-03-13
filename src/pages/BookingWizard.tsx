@@ -1136,7 +1136,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
 
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
               <div className="p-6">
-                <div className="grid grid-cols-2 gap-y-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                   <div className="text-slate-500">Job:</div>
                   <div className="font-bold text-slate-900 dark:text-white">{formData.jobName || t('notNamed')}</div>
 
@@ -1287,9 +1287,10 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
   return (
     <div className="max-w-4xl mx-auto">
       {/* Progress Bar */}
-      <div className="mb-12 relative">
-        <div className="absolute top-5 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-800 z-0"></div>
-        <div className="flex justify-between relative z-10">
+      <div className="mb-8 sm:mb-12 overflow-x-auto pb-2">
+        <div className="relative min-w-[540px]">
+          <div className="absolute top-5 left-0 w-full h-0.5 bg-slate-200 dark:bg-slate-800 z-0"></div>
+          <div className="flex justify-between relative z-10">
           {steps.map((s) => {
             const isSkipped = skippedSteps.has(s.id);
             const isPast = step > s.id && !isSkipped;
@@ -1317,11 +1318,12 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
       {/* Step Content */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none min-h-[400px]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none min-h-[400px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
@@ -1336,11 +1338,11 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
       </div>
 
       {/* Navigation */}
-      <div className="mt-8 flex items-center justify-between">
+      <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
         <button
           onClick={step === 1 ? onCancel : prevStep}
           disabled={submitting}
-          className="px-6 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-2"
+          className="w-full sm:w-auto justify-center px-6 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-2"
         >
           <ChevronLeft size={18} />
           {step === 1 ? t('cancel') : t('back')}
@@ -1349,7 +1351,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
         <button
           onClick={step === 5 ? handleSubmit : nextStep}
           disabled={submitting || (step === 5 && !confirmed) || (step === 1 && !formData.jobName.trim())}
-          className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto justify-center px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting && <Loader2 size={18} className="animate-spin" />}
           {step === 5 ? t('submitRequest') : t('next')}
@@ -1359,3 +1361,4 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
     </div>
   );
 };
+

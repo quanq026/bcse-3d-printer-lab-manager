@@ -125,23 +125,23 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
       {/* ── History Page: full-width job list with search/filter ── */}
       {isHistoryPage ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('history')}</h3>
-            <div className="flex items-center gap-3">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input
                   type="text"
                   placeholder="Tìm kiếm..."
                   value={historySearch}
                   onChange={e => setHistorySearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 w-56"
+                  className="pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-56"
                 />
               </div>
               <select
                 value={historyFilter}
                 onChange={e => setHistoryFilter(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none"
+                className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm outline-none w-full sm:w-auto"
               >
                 <option value="all">Tất cả</option>
                 <option value="Submitted">Đã gửi</option>
@@ -171,8 +171,37 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
                   <p className="text-sm font-medium">Không có yêu cầu nào</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <>
+                  <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                    {filtered.map((job) => (
+                      <button
+                        key={job.id}
+                        onClick={() => onSelectJob(job.id)}
+                        className="w-full p-4 text-left space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{job.jobName}</p>
+                            <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">{job.id}</p>
+                          </div>
+                          <StatusChip status={job.status as any} />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-400">{t('printerName')}: </span>
+                            <span className="text-slate-600 dark:text-slate-300">{job.printerName || t('notAssigned')}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">{t('materialType')}: </span>
+                            <span className="text-slate-600 dark:text-slate-300">{job.materialType} ({job.color})</span>
+                          </div>
+                          <div className="text-slate-400">{job.slotTime || t('waitingApproval')}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Job</th>
@@ -217,8 +246,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
                         </tr>
                       ))}
                     </tbody>
-                  </table>
-                </div>
+                    </table>
+                  </div>
+                </>
               );
             })()}
           </div>
@@ -252,8 +282,37 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
                   </button>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <>
+                  <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+                    {myJobs.slice(0, 10).map((job) => (
+                      <button
+                        key={job.id}
+                        onClick={() => onSelectJob(job.id)}
+                        className="w-full p-4 text-left space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{job.jobName}</p>
+                            <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">{job.id}</p>
+                          </div>
+                          <StatusChip status={job.status as any} />
+                        </div>
+                        <div className="grid grid-cols-1 gap-2 text-xs">
+                          <div>
+                            <span className="text-slate-400">{t('printerName')}: </span>
+                            <span className="text-slate-600 dark:text-slate-300">{job.printerName || t('notAssigned')}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400">{t('materialType')}: </span>
+                            <span className="text-slate-600 dark:text-slate-300">{job.materialType} ({job.color})</span>
+                          </div>
+                          <div className="text-slate-400">{job.slotTime || t('waitingApproval')}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Job</th>
@@ -298,8 +357,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
                         </tr>
                       ))}
                     </tbody>
-                  </table>
-                </div>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -463,3 +523,4 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
     </div>
   );
 };
+

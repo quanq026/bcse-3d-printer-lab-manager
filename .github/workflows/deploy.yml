@@ -52,4 +52,20 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            bash /home/${{ secrets.EC2_USER }}/bcse-3d-lab/deploy/deploy-remote.sh
+            set -e
+            APP_DIR="/home/${{ secrets.EC2_USER }}/bcse-3d-lab"
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+            echo "→ Extracting package..."
+            tar -xzf /tmp/deploy-package.tar.gz --overwrite
+            rm -f /tmp/deploy-package.tar.gz
+            echo "→ Installing production dependencies..."
+            npm ci --omit=dev
+            echo "→ Restarting app with PM2..."
+            if pm2 describe bcse-3d-lab > /dev/null 2>&1; then
+              pm2 restart bcse-3d-lab
+            else
+              pm2 start pm2.config.cjs --env production
+            fi
+            pm2 save
+            echo "✅ Deploy complete!"

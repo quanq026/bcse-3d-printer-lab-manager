@@ -1,17 +1,17 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Printer,
-  ShieldCheck,
-  FileText,
-  CheckCircle2,
-  Loader2,
   AlertCircle,
-  Globe,
+  ArrowRight,
+  CheckCircle2,
   Eye,
   EyeOff,
-  ArrowRight,
-  MapPin,
+  FileText,
+  Globe,
   Layers,
+  Loader2,
+  MapPin,
+  Printer,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
@@ -22,43 +22,6 @@ interface LandingPageProps {
 }
 
 const VJU_REGEX = /@(st\.vju\.ac\.vn|vju\.ac\.vn)$/i;
-
-const FLOATING_SHAPES = [
-  { size: 120, top: '8%', left: '5%', delay: 0, opacity: 0.07 },
-  { size: 80, top: '60%', left: '2%', delay: 1.5, opacity: 0.05 },
-  { size: 60, top: '30%', right: '8%', delay: 0.8, opacity: 0.06 },
-  { size: 100, bottom: '10%', right: '3%', delay: 2, opacity: 0.05 },
-  { size: 40, top: '75%', left: '30%', delay: 1, opacity: 0.08 },
-];
-
-const FloatingShapes = () => (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-    {FLOATING_SHAPES.map((shape, i) => (
-      <div
-        key={i}
-        className="absolute rounded-full border-2 border-amber-400"
-        style={{
-          width: shape.size,
-          height: shape.size,
-          top: shape.top,
-          left: (shape as any).left,
-          right: (shape as any).right,
-          bottom: (shape as any).bottom,
-          opacity: shape.opacity,
-          animation: `landing-float ${6 + i}s ease-in-out ${shape.delay}s infinite`,
-        }}
-      />
-    ))}
-    <div
-      className="absolute inset-0"
-      style={{
-        backgroundImage: 'radial-gradient(circle, #d97706 1px, transparent 1px)',
-        backgroundSize: '32px 32px',
-        opacity: 0.08,
-      }}
-    />
-  </div>
-);
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const { lang, setLang, t } = useLang();
@@ -84,9 +47,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     api.getSettings().then(setSettings).catch(() => {});
   }, []);
 
+  const heroFeatures = useMemo(
+    () => [
+      { icon: FileText, title: t('featurePolicy'), desc: t('featurePolicyDesc') },
+      { icon: Layers, title: t('featureMaterial'), desc: t('featureMaterialDesc') },
+      { icon: ShieldCheck, title: t('featureSafe'), desc: t('featureSafeDesc') },
+    ],
+    [t]
+  );
+
+  const contactHref = settings.contact_facebook || (settings.contact_email ? `mailto:${settings.contact_email}` : settings.contact_zalo || '#');
+  const guideUrl = settings.guide_url;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
     try {
       const res = await api.login(loginEmail, loginPass);
@@ -102,10 +78,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+
     if (!VJU_REGEX.test(email)) {
       setError(t('invalidEmail'));
       return;
     }
+
     if (password !== confirmPass) {
       setError('Mật khẩu xác nhận không khớp');
       return;
@@ -114,188 +93,138 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     setLoading(true);
     try {
       await api.register({ email, password, fullName, studentId, phone, supervisor });
-      setSuccess(t('registerSuccess'));
       setTab('login');
-      setError('');
-      setSuccess('');
       setLoginEmail(email);
+      setPassword('');
+      setConfirmPass('');
+      setSuccess(t('registerSuccess'));
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Có lỗi xảy ra');
     } finally {
       setLoading(false);
     }
   };
 
-  const guideUrl = settings.guide_url;
-  const contactEmail = settings.contact_email;
-  const contactFb = settings.contact_facebook;
-  const contactZalo = settings.contact_zalo;
-
   return (
-    <main className="min-h-screen flex flex-col md:flex-row" style={{ background: '#fdf8f0' }}>
-      <section
-        className="relative flex flex-1 flex-col justify-between overflow-hidden p-6 sm:p-10 md:p-14"
-        style={{ background: 'linear-gradient(135deg, #1c1917 0%, #292524 60%, #1c1917 100%)' }}
-      >
-        <FloatingShapes />
+    <main className="landing-shell">
+      <div className="landing-noise" aria-hidden="true" />
+      <div className="landing-grid" aria-hidden="true" />
 
-        <div className="relative z-10">
-          <div className="landing-enter flex items-center gap-3 mb-10 sm:mb-14">
-            <div
-              className="flex h-12 w-12 items-center justify-center rounded-2xl shadow-xl"
-              style={{ background: 'linear-gradient(135deg, #d97706, #b45309)' }}
-            >
-              <Printer size={26} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-white" style={{ fontFamily: 'Georgia, serif' }}>
-                BCSE 3D Lab
-              </h1>
-              <div className="mt-0.5 flex items-center gap-1.5">
-                <MapPin size={10} className="text-amber-400" />
-                <p className="text-xs font-medium tracking-wider" style={{ color: '#d97706' }}>
-                  VJU Mỹ Đình · VJU Hòa Lạc
-                </p>
-              </div>
-            </div>
+      <section className="landing-hero">
+        <div className="landing-masthead landing-reveal">
+          <div className="landing-brand-mark">
+            <Printer size={26} strokeWidth={2.1} />
           </div>
-
-          <div className="landing-enter landing-enter-delay-1">
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em]" style={{ color: '#d97706' }}>
-              Hệ thống quản lý
+          <div>
+            <h1 className="landing-brand-title">BCSE 3D Lab</h1>
+            <p className="landing-brand-subtitle">
+              <MapPin size={12} />
+              <span>VJU My Dinh . VJU Hoa Lac</span>
             </p>
-            <h2 className="mb-6 text-3xl font-black leading-tight text-white sm:text-4xl md:text-5xl" style={{ fontFamily: 'Georgia, serif' }}>
-              {t('heroTitle')} <br />
-              <span style={{ color: '#d97706' }}>{t('heroHighlight')}</span>
-            </h2>
-            <p className="max-w-md text-sm leading-relaxed sm:text-base" style={{ color: '#a8a29e' }}>
-              {t('heroDesc')}
-            </p>
-          </div>
-
-          <div className="landing-enter landing-enter-delay-2 mt-10 flex flex-wrap gap-3">
-            {['VJU Mỹ Đình', 'VJU Hòa Lạc'].map((campus, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 rounded-full border px-4 py-2"
-                style={{ borderColor: '#44403c', background: '#292524' }}
-              >
-                <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-xs font-bold text-white">{campus}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="landing-enter landing-enter-delay-3 mt-10 space-y-5">
-            {[
-              { icon: FileText, title: t('featurePolicy'), desc: t('featurePolicyDesc') },
-              { icon: Layers, title: t('featureMaterial'), desc: t('featureMaterialDesc') },
-              { icon: ShieldCheck, title: t('featureSafe'), desc: t('featureSafeDesc') },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex items-start gap-4">
-                <div className="mt-0.5 shrink-0 rounded-lg p-1.5" style={{ background: '#292524', border: '1px solid #44403c' }}>
-                  <Icon size={16} style={{ color: '#d97706' }} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">{title}</h3>
-                  <p className="mt-0.5 text-xs leading-relaxed" style={{ color: '#78716c' }}>{desc}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
-        <div className="relative z-10 mt-8 flex flex-wrap items-center gap-5 text-xs" style={{ color: '#57534e' }}>
+        <div className="landing-editorial landing-reveal landing-reveal-delay-1">
+          <div className="landing-section-marker">// ACCESS PORTAL</div>
+          <p className="landing-kicker">SMART 3D PRINT REQUEST PLATFORM</p>
+          <h2 className="landing-display">
+            {t('heroTitle')}
+            <span>{t('heroHighlight')}</span>
+          </h2>
+          <p className="landing-copy">{t('heroDesc')}</p>
+        </div>
+
+        <div className="landing-feature-list landing-reveal landing-reveal-delay-3">
+          {heroFeatures.map(({ icon: Icon, title, desc }, index) => (
+            <article key={title} className="landing-feature-card">
+              <div className="landing-feature-index">{String(index + 1).padStart(2, '0')}</div>
+              <div className="landing-feature-icon">
+                <Icon size={18} />
+              </div>
+              <div>
+                <h3>{title}</h3>
+                <p>{desc}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="landing-footer-meta landing-reveal landing-reveal-delay-3">
           <span>{t('copyright')}</span>
           {guideUrl ? (
-            <a href={guideUrl} target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-amber-400">
+            <a href={guideUrl} target="_blank" rel="noopener noreferrer">
               {t('userGuide')}
             </a>
           ) : (
-            <span className="opacity-40">{t('userGuide')}</span>
+            <span className="is-muted">{t('userGuide')}</span>
           )}
-          {contactEmail || contactFb || contactZalo ? (
-            <a
-              href={contactFb || (contactEmail ? `mailto:${contactEmail}` : '#')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-colors hover:text-amber-400"
-            >
+          {settings.contact_email || settings.contact_facebook || settings.contact_zalo ? (
+            <a href={contactHref} target="_blank" rel="noopener noreferrer">
               {t('contactSupport')}
             </a>
           ) : (
-            <span className="opacity-40">{t('contactSupport')}</span>
+            <span className="is-muted">{t('contactSupport')}</span>
           )}
         </div>
       </section>
 
-      <section
-        className="relative flex w-full flex-col justify-center border-t p-5 sm:p-8 md:w-[480px] md:border-l md:border-t-0 md:p-12"
-        style={{ background: '#fffbf5', borderColor: '#e7e0d6' }}
-      >
-        <div className="absolute right-4 top-4 flex items-center gap-3 sm:right-6 sm:top-6">
-          <button
-            onClick={() => setLang(lang === 'VN' ? 'JP' : 'VN')}
-            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-all hover:bg-amber-50"
-            style={{ color: '#78716c', border: '1px solid #e7e0d6' }}
-          >
-            <Globe size={13} />
-            {lang === 'VN' ? '🇻🇳 Tiếng Việt' : '🇯🇵 日本語'}
-          </button>
-        </div>
+      <section className="landing-auth-wrap">
+        <div className="landing-auth-panel landing-reveal landing-reveal-delay-1">
+          <div className="landing-auth-topbar">
+            <button
+              onClick={() => setLang(lang === 'VN' ? 'JP' : 'VN')}
+              className="landing-lang-toggle"
+              aria-label="Toggle language"
+            >
+              <Globe size={14} />
+              <span>{lang === 'VN' ? 'VN' : 'JP'}</span>
+            </button>
+          </div>
 
-        <div className="mx-auto w-full max-w-md pt-10 sm:pt-0">
-          <div className="mb-8 landing-enter">
-            <div className="mb-4 h-1 w-10 rounded-full bg-amber-500" />
-            <h2 id="auth-title" className="mb-1.5 text-2xl font-black" style={{ color: '#1c1917', fontFamily: 'Georgia, serif' }}>
+          <div className="landing-auth-header">
+            <h2 id="auth-title" className="landing-auth-title">
               {tab === 'login' ? t('welcome') : t('registerTitle')}
             </h2>
-            <p className="text-sm" style={{ color: '#78716c' }}>
+            <p className="landing-auth-subtitle">
               {tab === 'login' ? t('loginSubtitle') : t('registerSubtitle')}
             </p>
           </div>
 
-          <div className="mb-7 flex rounded-xl p-1" style={{ background: '#f0e9de' }}>
+          <div className="landing-auth-tabs" role="tablist" aria-labelledby="auth-title">
             {(['login', 'register'] as const).map((tabItem) => (
               <button
                 key={tabItem}
+                type="button"
+                role="tab"
+                aria-selected={tab === tabItem}
                 onClick={() => {
                   setTab(tabItem);
                   setError('');
                   setSuccess('');
                 }}
-                className={cn(
-                  'flex-1 rounded-lg py-2 text-sm font-bold transition-all',
-                  tab === tabItem ? 'bg-white shadow-sm' : 'hover:text-stone-700'
-                )}
-                style={{ color: tab === tabItem ? '#1c1917' : '#57534e' }}
+                className={cn('landing-auth-tab', tab === tabItem && 'is-active')}
               >
-                {tabItem === 'login' ? t('login') : t('register')}
+                <span>{tabItem === 'login' ? t('login') : t('register')}</span>
               </button>
             ))}
           </div>
 
           {error && (
-            <div
-              className="mb-4 flex items-start gap-2 rounded-xl p-3 text-sm landing-enter"
-              style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}
-            >
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              {error}
-            </div>
-          )}
-          {success && (
-            <div
-              className="mb-4 flex items-start gap-2 rounded-xl p-3 text-sm landing-enter"
-              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a' }}
-            >
-              <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-              {success}
+            <div className="landing-auth-alert is-error" role="alert">
+              <AlertCircle size={16} />
+              <span>{error}</span>
             </div>
           )}
 
-          {tab === 'login' && (
-            <form onSubmit={handleLogin} className="space-y-4">
+          {success && (
+            <div className="landing-auth-alert is-success" role="status">
+              <CheckCircle2 size={16} />
+              <span>{success}</span>
+            </div>
+          )}
+
+          {tab === 'login' ? (
+            <form onSubmit={handleLogin} className="landing-auth-form">
               <Field label={t('email')}>
                 <input
                   type="email"
@@ -303,24 +232,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="auth-input"
+                  className="landing-input"
                 />
               </Field>
+
               <Field label={t('password')}>
-                <div className="relative">
+                <div className="landing-password-field">
                   <input
                     type={showPass ? 'text' : 'password'}
                     placeholder="••••••••"
                     required
                     value={loginPass}
                     onChange={(e) => setLoginPass(e.target.value)}
-                    className="auth-input pr-10"
+                    className="landing-input landing-input-password"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md"
-                    style={{ color: '#78716c' }}
+                    className="landing-password-toggle"
+                    onClick={() => setShowPass((prev) => !prev)}
                     aria-label={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     title={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
@@ -328,26 +257,54 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   </button>
                 </div>
               </Field>
+
               <SubmitBtn loading={loading} label={t('login')} />
             </form>
-          )}
-
-          {tab === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-3">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          ) : (
+            <form onSubmit={handleRegister} className="landing-auth-form">
+              <div className="landing-form-grid">
                 <Field label={t('fullName')}>
-                  <input type="text" placeholder="Nguyễn Văn A" required value={fullName} onChange={(e) => setFullName(e.target.value)} className="auth-input" />
+                  <input
+                    type="text"
+                    placeholder="Nguyen Van A"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="landing-input"
+                  />
                 </Field>
+
                 <Field label={t('studentId')}>
-                  <input type="text" placeholder="2201xxxx" value={studentId} onChange={(e) => setStudentId(e.target.value)} className="auth-input" />
+                  <input
+                    type="text"
+                    placeholder="2201xxxx"
+                    value={studentId}
+                    onChange={(e) => setStudentId(e.target.value)}
+                    className="landing-input"
+                  />
                 </Field>
               </div>
+
               <Field label={t('phone')}>
-                <input type="tel" placeholder="09xxxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} className="auth-input" />
+                <input
+                  type="tel"
+                  placeholder="09xxxxxxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="landing-input"
+                />
               </Field>
+
               <Field label={t('supervisor')}>
-                <input type="text" placeholder="Dr. Nguyễn Văn B" value={supervisor} onChange={(e) => setSupervisor(e.target.value)} className="auth-input" />
+                <input
+                  type="text"
+                  placeholder="Dr. Nguyen Van B"
+                  value={supervisor}
+                  onChange={(e) => setSupervisor(e.target.value)}
+                  className="landing-input"
+                />
               </Field>
+
               <Field label={t('email')} hint={t('emailHint')}>
                 <input
                   type="email"
@@ -355,28 +312,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="auth-input"
-                  style={{ borderColor: email && !VJU_REGEX.test(email) ? '#fca5a5' : '' }}
+                  className={cn('landing-input', email && !VJU_REGEX.test(email) && 'is-invalid')}
                 />
                 {email && !VJU_REGEX.test(email) && (
-                  <p className="mt-1 text-xs" style={{ color: '#ef4444' }}>{t('invalidEmail')}</p>
+                  <p className="landing-field-error">{t('invalidEmail')}</p>
                 )}
               </Field>
+
               <Field label={t('password')}>
-                <div className="relative">
+                <div className="landing-password-field">
                   <input
                     type={showPass ? 'text' : 'password'}
                     placeholder="••••••••"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="auth-input pr-10"
+                    className="landing-input landing-input-password"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md"
-                    style={{ color: '#78716c' }}
+                    className="landing-password-toggle"
+                    onClick={() => setShowPass((prev) => !prev)}
                     aria-label={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     title={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
@@ -384,6 +340,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   </button>
                 </div>
               </Field>
+
               <Field label="Xác nhận mật khẩu">
                 <input
                   type={showPass ? 'text' : 'password'}
@@ -391,13 +348,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   required
                   value={confirmPass}
                   onChange={(e) => setConfirmPass(e.target.value)}
-                  className="auth-input"
-                  style={{ borderColor: confirmPass && confirmPass !== password ? '#fca5a5' : '' }}
+                  className={cn('landing-input', confirmPass && confirmPass !== password && 'is-invalid')}
                 />
                 {confirmPass && confirmPass !== password && (
-                  <p className="mt-1 text-xs" style={{ color: '#ef4444' }}>Mật khẩu không khớp</p>
+                  <p className="landing-field-error">Mật khẩu không khớp</p>
                 )}
               </Field>
+
               <SubmitBtn
                 loading={loading}
                 label={t('register')}
@@ -407,71 +364,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           )}
         </div>
       </section>
-
-      <style>{`
-        @keyframes landing-float {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-18px) rotate(15deg); }
-        }
-        @keyframes landing-enter {
-          from { opacity: 0; transform: translateY(18px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .landing-enter {
-          animation: landing-enter 0.6s ease-out both;
-        }
-        .landing-enter-delay-1 { animation-delay: 0.1s; }
-        .landing-enter-delay-2 { animation-delay: 0.2s; }
-        .landing-enter-delay-3 { animation-delay: 0.3s; }
-        .auth-input {
-          width: 100%;
-          padding: 10px 16px;
-          background: #fffbf5;
-          border: 1px solid #e7e0d6;
-          border-radius: 10px;
-          font-size: 14px;
-          outline: none;
-          transition: border-color 0.15s, box-shadow 0.15s;
-          color: #1c1917;
-        }
-        .auth-input:focus {
-          border-color: #d97706;
-          box-shadow: 0 0 0 3px rgba(217,119,6,0.12);
-        }
-        .auth-input::placeholder { color: #a8a29e; }
-        .auth-input::-ms-reveal,
-        .auth-input::-ms-clear {
-          display: none;
-        }
-      `}</style>
     </main>
   );
 };
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-bold uppercase tracking-wider" style={{ color: '#44403c' }}>{label}</label>
+    <label className="landing-field">
+      <span className="landing-field-label">{label}</span>
       {children}
-      {hint && <p className="text-[11px]" style={{ color: '#a8a29e' }}>{hint}</p>}
-    </div>
+      {hint && <span className="landing-field-hint">{hint}</span>}
+    </label>
   );
 }
 
 function SubmitBtn({ loading, label, disabled = false }: { loading: boolean; label: string; disabled?: boolean }) {
   return (
-    <button
-      type="submit"
-      disabled={loading || disabled}
-      className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-      style={{
-        background: disabled ? '#d6cfc4' : 'linear-gradient(135deg, #d97706, #b45309)',
-        color: 'white',
-        boxShadow: disabled ? 'none' : '0 4px 14px rgba(217,119,6,0.3)',
-      }}
-    >
+    <button type="submit" disabled={loading || disabled} className="landing-submit">
       {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
-      {label}
+      <span>{label}</span>
     </button>
   );
 }

@@ -17,9 +17,20 @@ import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
 import { cn } from '../lib/utils';
+import { MaterialType, type Printer as PrinterRecord } from '../types';
 
-const MATERIAL_OPTIONS = ['PLA', 'PETG', 'TPU', 'ABS'];
-const STATUS_OPTIONS = ['Available', 'Busy', 'Maintenance'];
+type PrinterFormData = {
+  name: string;
+  buildVolume: string;
+  supportedMaterials: MaterialType[];
+  status: PrinterRecord['status'];
+  location: string;
+  imageUrl: string;
+  hasAMS: boolean;
+};
+
+const MATERIAL_OPTIONS: MaterialType[] = [MaterialType.PLA, MaterialType.PETG, MaterialType.TPU, MaterialType.ABS];
+const STATUS_OPTIONS: PrinterRecord['status'][] = ['Available', 'Busy', 'Maintenance'];
 const CAMPUS_OPTIONS = ['My Dinh', 'Hoa Lac'];
 const CAMPUS_LABELS: Record<string, string> = {
   'My Dinh': 'Mỹ Đình',
@@ -35,10 +46,10 @@ const statusBadge = (status: string) => {
   return map[status] || 'border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-200';
 };
 
-const defaultForm = {
+const defaultForm: PrinterFormData = {
   name: '',
   buildVolume: '',
-  supportedMaterials: ['PLA'] as string[],
+  supportedMaterials: [MaterialType.PLA],
   status: 'Available',
   location: 'My Dinh',
   imageUrl: '',
@@ -56,7 +67,7 @@ export const AdminPrinters: React.FC = () => {
     Maintenance: copy.statusMaintenance,
   };
 
-  const [printers, setPrinters] = useState<any[]>([]);
+  const [printers, setPrinters] = useState<PrinterRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -88,7 +99,7 @@ export const AdminPrinters: React.FC = () => {
     setShowModal(true);
   };
 
-  const openEdit = (printer: any) => {
+  const openEdit = (printer: PrinterRecord) => {
     setEditId(printer.id);
     setForm({
       name: printer.name,
@@ -109,14 +120,14 @@ export const AdminPrinters: React.FC = () => {
     try {
       const result = await api.uploadPrinterImage(file);
       setForm((current) => ({ ...current, imageUrl: result.url }));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setImageUploading(false);
     }
   };
 
-  const toggleMaterial = (material: string) => {
+  const toggleMaterial = (material: MaterialType) => {
     setForm((current) => ({
       ...current,
       supportedMaterials: current.supportedMaterials.includes(material)
@@ -144,8 +155,8 @@ export const AdminPrinters: React.FC = () => {
       }
       await fetchPrinters();
       setShowModal(false);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
     }
@@ -157,19 +168,19 @@ export const AdminPrinters: React.FC = () => {
     try {
       await api.deletePrinter(id);
       await fetchPrinters();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setDeletingId(null);
     }
   };
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const handleStatusChange = async (id: string, status: PrinterRecord['status']) => {
     try {
       await api.updatePrinter(id, { status });
       await fetchPrinters();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     }
   };
 
@@ -311,7 +322,7 @@ export const AdminPrinters: React.FC = () => {
                         </div>
 
                         <div className="grid gap-3">
-                          <select value={printer.status} onChange={(event) => handleStatusChange(printer.id, event.target.value)} className={cn('app-control rounded-[18px] text-sm font-bold', statusBadge(printer.status))}>
+                          <select value={printer.status} onChange={(event) => handleStatusChange(printer.id, event.target.value as PrinterRecord['status'])} className={cn('app-control rounded-[18px] text-sm font-bold', statusBadge(printer.status))}>
                             {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{statusLabels[status] || status}</option>)}
                           </select>
                           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_48px]">
@@ -409,7 +420,7 @@ export const AdminPrinters: React.FC = () => {
 
                 <label className="grid gap-2 md:col-span-2">
                   <span className="app-overline">{copy.statusField}</span>
-                  <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))} className={cn('app-control rounded-[18px] text-sm font-bold', statusBadge(form.status))}>
+                  <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as PrinterRecord['status'] }))} className={cn('app-control rounded-[18px] text-sm font-bold', statusBadge(form.status))}>
                     {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{statusLabels[status] || status}</option>)}
                   </select>
                 </label>

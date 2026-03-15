@@ -20,48 +20,53 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import type { User as AppUser, Printer, PricingRule, FilamentInventory, ServiceFee } from '../types';
 import { MaterialType, MaterialSource } from '../types';
 import { api } from '../lib/api';
 import { FilePreview } from '../components/FilePreview';
 import { useLang } from '../contexts/LanguageContext';
+import { getUiText, fillText } from '../lib/uiText';
 
 type PrintMode = 'self' | 'lab_assisted';
 
 interface BookingWizardProps {
   onComplete: () => void;
   onCancel: () => void;
-  currentUser: any;
+  currentUser: AppUser | null;
 }
 
 // Color name → hex mapping for display
 const COLOR_HEX: Record<string, string> = {
-  'Trắng': '#ffffff', 'Đen': '#1a1a1a', 'Xám': '#9ca3af',
-  'Xanh dương': '#3b82f6', 'Xanh lá': '#22c55e', 'Đỏ': '#ef4444',
-  'Vàng': '#eab308', 'Cam': '#f97316', 'Tím': '#a855f7', 'Hồng': '#ec4899',
+  'White': '#ffffff', 'Black': '#1a1a1a', 'Gray': '#9ca3af',
+  'Blue': '#3b82f6', 'Green': '#22c55e', 'Red': '#ef4444',
+  'Yellow': '#eab308', 'Orange': '#f97316', 'Purple': '#a855f7', 'Pink': '#ec4899',
 };
 
 const BRAND_OPTIONS: Record<string, string[]> = {
-  PLA: ['Bambu Lab', 'Elegoo', 'Sunlu', 'eSUN', 'Polymaker', 'Creality', 'Khác'],
-  PETG: ['Bambu Lab', 'Elegoo', 'Sunlu', 'eSUN', 'Polymaker', 'Khác'],
-  TPU: ['Bambu Lab', 'Sunlu', 'eSUN', 'Sainsmart', 'Khác'],
-  ABS: ['Bambu Lab', 'eSUN', 'Polymaker', 'Hatchbox', 'Khác'],
+  PLA: ['Bambu Lab', 'Elegoo', 'Sunlu', 'eSUN', 'Polymaker', 'Creality', 'Other'],
+  PETG: ['Bambu Lab', 'Elegoo', 'Sunlu', 'eSUN', 'Polymaker', 'Other'],
+  TPU: ['Bambu Lab', 'Sunlu', 'eSUN', 'Sainsmart', 'Other'],
+  ABS: ['Bambu Lab', 'eSUN', 'Polymaker', 'Hatchbox', 'Other'],
 };
 
 const SUB_SLOTS: Record<string, string[]> = {
-  'Sáng': ['8h–9h', '9h–10h', '10h–11h', '11h–12h'],
-  'Chiều': ['13h–14h', '14h–15h', '15h–16h', '16h–17h'],
-  'Tối': ['17h–18h', '18h–19h', '19h–20h'],
+  morning: ['8h–9h', '9h–10h', '10h–11h', '11h–12h'],
+  afternoon: ['13h–14h', '14h–15h', '15h–16h', '16h–17h'],
+  evening: ['17h–18h', '18h–19h', '19h–20h'],
 };
 
 export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCancel, currentUser }) => {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const text = getUiText(lang);
+  const bw = text.bookingWizard;
+  const clr = text.colors;
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [printers, setPrinters] = useState<any[]>([]);
-  const [pricing, setPricing] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [serviceFees, setServiceFees] = useState<any[]>([]);
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [pricing, setPricing] = useState<PricingRule[]>([]);
+  const [inventory, setInventory] = useState<FilamentInventory[]>([]);
+  const [serviceFees, setServiceFees] = useState<ServiceFee[]>([]);
   const [uploadedFile, setUploadedFile] = useState<{ fileName: string; originalName: string; rawFile: File } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -81,7 +86,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
     estimatedGrams: 0,
     printerId: '',
     preferredDate: '',
-    preferredSlot: 'Chiều',
+    preferredSlot: 'afternoon',
     preferredSubSlot: '',
     fileName: '',
     nozzleSize: '',
@@ -111,7 +116,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
     : allColors;
 
   // Cross-filtered: available materials given selected color(s) (or all if none)
-  const selectedColors = formData.colors.filter(c => c !== 'Khác');
+  const selectedColors = formData.colors.filter(c => c !== 'Other');
   const availableMaterials = selectedColors.length > 0
     ? [...new Set(inStockItems.filter(i => selectedColors.includes(i.color)).map(i => i.material))]
     : allMaterials;
@@ -165,10 +170,10 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
     const name = file.name.toLowerCase();
     if (isSelf && isLabMaterial) {
       if (name.endsWith('.gcode.3mf') || name.endsWith('.gcode')) return { ok: true, err: '' };
-      return { ok: false, err: 'Chỉ hỗ trợ .gcode và .gcode.3mf (file đã slice từ Bambu/Orca)' };
+      return { ok: false, err: bw.fileErrorGcode };
     } else {
       if ((name.endsWith('.3mf') && !name.endsWith('.gcode.3mf')) || name.endsWith('.stl')) return { ok: true, err: '' };
-      return { ok: false, err: 'Chỉ hỗ trợ file chưa slice (.stl, .3mf). Không up file .gcode hoặc .gcode.3mf ở chế độ này' };
+      return { ok: false, err: bw.fileErrorStl };
     }
   };
 
@@ -291,7 +296,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
         const sMatch = text.match(/;\s*(BambuStudio|OrcaSlicer|PrusaSlicer|Cura)/i);
         if (sMatch) setFormData(f => ({ ...f, slicerEngine: sMatch[1] }));
       }
-    } catch (e) { console.error('Lỗi khi đọc file thông số:', e); }
+    } catch (e) { console.error('Error reading file metadata:', e); }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,8 +312,8 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
       const result = await api.uploadFile(file);
       setUploadedFile({ ...result, originalName: file.name, rawFile: file });
       setFormData(f => ({ ...f, fileName: result.fileName }));
-    } catch (err: any) {
-      setError(err.message || 'Upload thất bại');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : bw.uploadFailed);
     } finally { setUploading(false); }
   };
 
@@ -326,8 +331,8 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
       const result = await api.uploadFile(file);
       setUploadedFile({ ...result, originalName: file.name, rawFile: file });
       setFormData(f => ({ ...f, fileName: result.fileName }));
-    } catch (err: any) {
-      setError(err.message || 'Upload thất bại');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : bw.uploadFailed);
     } finally { setUploading(false); }
   };
 
@@ -370,23 +375,24 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
     });
   };
 
-  const locations = [...new Set(printers.map(p => p.location || 'Khác'))].sort();
+  const locations = [...new Set(printers.map(p => p.location || clr.other))].sort();
 
   const TIME_SLOTS = [
-    { label: t('morning'), range: t('morning_range') },
-    { label: t('afternoon'), range: t('afternoon_range') },
-    { label: t('evening'), range: t('evening_range') },
+    { key: 'morning', label: t('morning'), range: t('morning_range') },
+    { key: 'afternoon', label: t('afternoon'), range: t('afternoon_range') },
+    { key: 'evening', label: t('evening'), range: t('evening_range') },
   ];
 
   const handleSubmit = async () => {
-    if (!confirmed) { setError('Vui lòng xác nhận điều khoản trước khi gửi.'); return; }
+    if (!confirmed) { setError(bw.confirmTermsError); return; }
     setError('');
     setSubmitting(true);
     try {
-      const resolvedColors = formData.colors.map(c => c === 'Khác' ? (formData.customColor || 'Khác') : c);
+      const resolvedColors = formData.colors.map(c => c === 'Other' ? (formData.customColor || 'Other') : c);
+      const slotLabel = TIME_SLOTS.find(s => s.key === formData.preferredSlot)?.label || formData.preferredSlot;
       const slotTime = formData.preferredSubSlot
-        ? `${formData.preferredSlot} (${formData.preferredSubSlot})`
-        : formData.preferredSlot;
+        ? `${slotLabel} (${formData.preferredSubSlot})`
+        : slotLabel;
       await api.createJob({
         printMode: formData.printMode,
         jobName: formData.jobName,
@@ -401,11 +407,11 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
         printerId: isSelf ? (formData.printerId || undefined) : undefined,
         slotTime: isSelf ? slotTime : undefined,
         preferredDate: isSelf ? formData.preferredDate : undefined,
-        preferredSlot: isSelf ? formData.preferredSlot : undefined,
+        preferredSlot: isSelf ? slotLabel : undefined,
       });
       onComplete();
-    } catch (err: any) {
-      setError(err.message || 'Gửi yêu cầu thất bại');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : bw.submitFailed);
       setSubmitting(false);
     }
   };
@@ -475,8 +481,8 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[
-                  { val: MaterialSource.LAB, title: t('labMaterial'), desc: t('labMaterialDesc'), badge: 'Có phí', badgeColor: 'amber' },
-                  { val: MaterialSource.OWN, title: t('ownMaterial'), desc: t('ownMaterialDesc'), badge: 'Miễn phí', badgeColor: 'emerald' },
+                  { val: MaterialSource.LAB, title: t('labMaterial'), desc: t('labMaterialDesc'), badge: bw.badgePaid, badgeColor: 'amber' },
+                  { val: MaterialSource.OWN, title: t('ownMaterial'), desc: t('ownMaterialDesc'), badge: bw.badgeFree, badgeColor: 'emerald' },
                 ].map(({ val, title, desc, badge, badgeColor }) => (
                   <label
                     key={val}
@@ -522,7 +528,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                   onChange={(e) => setFormData(f => ({ ...f, jobName: e.target.value }))}
                 />
                 {!formData.jobName.trim() && (
-                  <p className="text-xs text-red-500">Tên yêu cầu là bắt buộc</p>
+                  <p className="text-xs text-red-500">{bw.jobNameRequired}</p>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -540,10 +546,10 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
               <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
                 <Info size={12} />
-                {isSelf && isLabMaterial && 'Tự in + Nhựa Lab: chọn loại nhựa → upload .gcode/.gcode.3mf → chọn máy & lịch → xác nhận (tính tiền ngay)'}
-                {isSelf && !isLabMaterial && 'Tự in + Tự mang: upload STL/3MF → chọn máy & lịch → xác nhận (miễn phí)'}
-                {!isSelf && isLabMaterial && 'In hộ + Nhựa Lab: chọn loại nhựa → upload STL/3MF → chờ Mod báo giá'}
-                {!isSelf && !isLabMaterial && 'In hộ + Tự mang: chọn loại nhựa → upload STL/3MF → chờ Mod xếp lịch (miễn phí)'}
+                {isSelf && isLabMaterial && bw.flowSelfLab}
+                {isSelf && !isLabMaterial && bw.flowSelfOwn}
+                {!isSelf && isLabMaterial && bw.flowLabLab}
+                {!isSelf && !isLabMaterial && bw.flowLabOwn}
               </p>
             </div>
           </div>
@@ -564,12 +570,12 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                         "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
                         labHasStock ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                       )}>
-                        {labHasStock ? 'Lab ok ✓' : 'Hết hàng'}
+                        {labHasStock ? bw.labOk : bw.outOfStock}
                       </span>
                     )}
                   </div>
                   {isLabMaterial && allMaterials.length === 0 && (
-                    <p className="text-xs text-red-500">Kho hiện không có vật liệu nào.</p>
+                    <p className="text-xs text-red-500">{bw.noMaterialInStock}</p>
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     {(isLabMaterial ? Object.values(MaterialType) : Object.values(MaterialType)).map((type) => {
@@ -600,7 +606,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                         >
                           {type}
                           {isLabMaterial && !hasAny && (
-                            <span className="block text-[9px] font-normal text-red-400 mt-0.5">Hết hàng</span>
+                            <span className="block text-[9px] font-normal text-red-400 mt-0.5">{bw.outOfStock}</span>
                           )}
                         </button>
                       );
@@ -622,7 +628,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                       )}
                     </div>
                     {availableColors.length === 0 && (
-                      <p className="text-xs text-slate-400">Không có màu nào cho loại nhựa này.</p>
+                      <p className="text-xs text-slate-400">{bw.noColorForMaterial}</p>
                     )}
                     {selectedPrinter?.hasAMS && formData.colors.length > 1 && (
                       <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
@@ -632,7 +638,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                           ))}
                         </div>
                         <p className="text-[11px] text-purple-700 dark:text-purple-300 font-bold">
-                          In {formData.colors.length} màu: {formData.colors.join(', ')}
+                          {fillText(bw.multiColorLabel, { count: String(formData.colors.length), colors: formData.colors.join(', ') })}
                         </p>
                       </div>
                     )}
@@ -676,7 +682,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                 {/* Brand — for Tự mang cases (In hộ + Own) */}
                 {!isLabMaterial && (
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Hãng nhựa (recommend)</label>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{bw.brandLabel}</label>
                     <div className="flex flex-wrap gap-2">
                       {(BRAND_OPTIONS[formData.materialType] || BRAND_OPTIONS.PLA).map(b => (
                         <button
@@ -688,10 +694,10 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                               ? 'bg-amber-500 text-white border-amber-500'
                               : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-400'
                           )}
-                        >{b}</button>
+                        >{b === 'Other' ? clr.other : b}</button>
                       ))}
                     </div>
-                    <p className="text-[11px] text-slate-400">Hãng nhựa bạn sẽ mang đến Lab</p>
+                    <p className="text-[11px] text-slate-400">{bw.brandHint}</p>
                   </div>
                 )}
               </div>
@@ -700,34 +706,34 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
               <div className="app-hover-box bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 h-fit space-y-4">
                 <h5 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <CreditCard size={18} className="text-blue-600" />
-                  Cấu trúc chi phí
+                  {bw.costStructure}
                 </h5>
 
                 {/* Fee rows */}
                 <div className="space-y-2">
-                  {/* Phí vật liệu */}
+                  {/* Material fee */}
                   <div className={`flex items-center justify-between p-3 rounded-xl border ${isLabMaterial ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 border-transparent opacity-50'}`}>
                     <div>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Phí vật liệu (Lab)</p>
-                      <p className="text-[10px] text-slate-400">Nhựa của Lab × đơn giá</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{bw.materialFeeLabel}</p>
+                      <p className="text-[10px] text-slate-400">{bw.materialFeeDesc}</p>
                     </div>
                     {isLabMaterial ? (
                       <span className="text-sm font-black text-blue-600">{getPricePerGram().toLocaleString()}đ/g</span>
                     ) : (
-                      <span className="text-xs font-bold text-emerald-600">Miễn phí</span>
+                      <span className="text-xs font-bold text-emerald-600">{bw.badgeFree}</span>
                     )}
                   </div>
 
-                  {/* Phí in hộ */}
+                  {/* Service fee */}
                   <div className={`flex items-center justify-between p-3 rounded-xl border ${!isSelf ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 border-transparent opacity-50'}`}>
                     <div>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Phí in hộ (Lab vận hành)</p>
-                      <p className="text-[10px] text-slate-400">Áp dụng khi chọn "In hộ"</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{bw.serviceFeeLabel}</p>
+                      <p className="text-[10px] text-slate-400">{bw.serviceFeeDesc}</p>
                     </div>
                     {!isSelf ? (
                       <span className="text-sm font-black text-violet-600">{getServiceFeePerGram().toLocaleString()}đ/g</span>
                     ) : (
-                      <span className="text-xs font-bold text-emerald-600">Không áp dụng</span>
+                      <span className="text-xs font-bold text-emerald-600">{bw.notApplicable}</span>
                     )}
                   </div>
                 </div>
@@ -735,26 +741,26 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                 {/* Summary badge per case */}
                 {isSelf && !isLabMaterial && (
                   <div className="p-3 rounded-xl border bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-medium leading-relaxed">
-                    Tự in + Tự mang nhựa: Hoàn toàn miễn phí
+                    {bw.caseSelfOwn}
                   </div>
                 )}
                 {isSelf && isLabMaterial && (
                   <div className="p-3 rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-medium leading-relaxed">
-                    Tự in + Nhựa Lab: Trả tiền nhựa {getPricePerGram().toLocaleString()}đ/g. <span className="font-bold">Không có phí in hộ.</span>
+                    {bw.caseSelfLab} {getPricePerGram().toLocaleString()}đ/g. <span className="font-bold">{bw.noServiceFee}</span>
                   </div>
                 )}
                 {!isSelf && !isLabMaterial && (
                   <div className="p-3 rounded-xl border bg-violet-50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800 text-violet-700 dark:text-violet-300 text-xs font-medium leading-relaxed">
-                    In hộ + Tự mang: Chỉ trả phí in hộ {getServiceFeePerGram().toLocaleString()}đ/g. <span className="font-bold">Miễn phí vật liệu.</span>
+                    {bw.caseLabOwn} {getServiceFeePerGram().toLocaleString()}đ/g. <span className="font-bold">{bw.freeMaterialNote}</span>
                   </div>
                 )}
                 {!isSelf && isLabMaterial && (
                   <div className="p-3 rounded-xl border bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs font-medium leading-relaxed">
-                    In hộ + Nhựa Lab: Vật liệu {getPricePerGram().toLocaleString()}đ/g + phí in hộ {getServiceFeePerGram().toLocaleString()}đ/g = <span className="font-bold">{(getPricePerGram() + getServiceFeePerGram()).toLocaleString()}đ/g</span>
+                    {bw.caseLabLab} {getPricePerGram().toLocaleString()}đ/g + {bw.serviceCostLabel} {getServiceFeePerGram().toLocaleString()}đ/g = <span className="font-bold">{(getPricePerGram() + getServiceFeePerGram()).toLocaleString()}đ/g</span>
                   </div>
                 )}
 
-                <p className="text-[10px] text-slate-400">Chi phí cuối tính theo số gram thực tế ở bước tiếp theo.</p>
+                <p className="text-[10px] text-slate-400">{bw.costFinalNote}</p>
               </div>
             </div>
           </div>
@@ -777,7 +783,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl flex gap-3">
                 <Info className="text-blue-500 shrink-0 mt-0.5" size={16} />
                 <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                  Upload file STL hoặc 3MF — Lab sẽ tự slice và xếp lịch in cho bạn. Không cần slice trước.
+                  {bw.uploadLabNote}
                 </p>
               </div>
             ) : null}
@@ -786,7 +792,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
               {/* File upload */}
               <div className="space-y-3">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  {isSelf && isLabMaterial ? 'Tải lên File (.gcode / .gcode.3mf)' : t('uploadFile')}
+                  {isSelf && isLabMaterial ? bw.uploadGcodeLabel : t('uploadFile')}
                 </label>
                 <input
                   ref={fileInputRef}
@@ -809,7 +815,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                   {uploading ? (
                     <div className="flex flex-col items-center justify-center gap-2 py-8">
                       <Loader2 size={24} className="animate-spin text-blue-600" />
-                      <p className="text-sm text-slate-500">Đang tải lên...</p>
+                      <p className="text-sm text-slate-500">{bw.uploading}</p>
                     </div>
                   ) : uploadedFile ? (
                     <div className="space-y-2">
@@ -848,7 +854,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                       <div className="text-center">
                         <p className="text-sm font-bold text-slate-900 dark:text-white">{t('uploadHint')}</p>
                         <p className="text-xs text-slate-500 mt-1">
-                          {isSelf && isLabMaterial ? 'Hỗ trợ .gcode, .gcode.3mf (tối đa 50MB)' : t('uploadNote')}
+                          {isSelf && isLabMaterial ? bw.supportGcode : t('uploadNote')}
                         </p>
                       </div>
                     </div>
@@ -888,7 +894,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                     </div>
                     <p className="text-[11px] text-slate-400 flex items-center gap-1">
                       <Info size={11} />
-                      {isSelf && isLabMaterial ? 'Tự động tính toán từ file đã slice' : t('estimatedTimeHint')}
+                      {isSelf && isLabMaterial ? bw.autoCalc : t('estimatedTimeHint')}
                     </p>
                   </div>
 
@@ -899,7 +905,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                     <input
                       type="number"
                       min="0"
-                      placeholder="Ví dụ: 45"
+                      placeholder={bw.exampleGrams}
                       className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm disabled:opacity-60 disabled:bg-slate-100 disabled:cursor-not-allowed"
                       value={formData.estimatedGrams || ''}
                       onChange={(e) => setFormData(f => ({ ...f, estimatedGrams: parseInt(e.target.value) || 0 }))}
@@ -907,7 +913,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                     />
                     <p className="text-[11px] text-slate-400 flex items-center gap-1">
                       <Info size={11} />
-                      {isSelf && isLabMaterial ? 'Tự động tính toán từ file đã slice' : t('estimatedGramsHint')}
+                      {isSelf && isLabMaterial ? bw.autoCalc : t('estimatedGramsHint')}
                     </p>
                   </div>
 
@@ -917,31 +923,31 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                       <p className="text-xs text-slate-500 mb-2">{t('costEstimate')}</p>
                       {isLabMaterial && (
                         <div className="flex justify-between text-[11px] text-slate-600 dark:text-slate-400">
-                          <span>Vật liệu: {formData.estimatedGrams}g × {getPricePerGram().toLocaleString()}đ/g</span>
+                          <span>{bw.materialCostLabel}: {formData.estimatedGrams}g × {getPricePerGram().toLocaleString()}đ/g</span>
                           <span className="font-bold">{matCost.toLocaleString()}đ</span>
                         </div>
                       )}
                       {!isSelf && getServiceFeePerGram() > 0 && (
                         <div className="flex justify-between text-[11px] text-slate-600 dark:text-slate-400">
-                          <span>Phí in hộ: {formData.estimatedGrams}g × {getServiceFeePerGram().toLocaleString()}đ/g</span>
+                          <span>{bw.serviceCostLabel}: {formData.estimatedGrams}g × {getServiceFeePerGram().toLocaleString()}đ/g</span>
                           <span className="font-bold">{svcCost.toLocaleString()}đ</span>
                         </div>
                       )}
                       <div className={`flex justify-between pt-1 border-t ${isSelf ? 'border-blue-100 dark:border-blue-800' : 'border-amber-100 dark:border-amber-800'}`}>
-                        <span className={`text-sm font-bold ${isSelf ? 'text-blue-600' : 'text-amber-700 dark:text-amber-300'}`}>Tổng ước tính</span>
+                        <span className={`text-sm font-bold ${isSelf ? 'text-blue-600' : 'text-amber-700 dark:text-amber-300'}`}>{bw.totalEstimate}</span>
                         <span className={`text-xl font-black ${isSelf ? 'text-blue-600' : 'text-amber-700 dark:text-amber-300'}`}>{totalCost.toLocaleString()}đ</span>
                       </div>
                       <p className="text-[10px] text-slate-400">
-                        {!isSelf ? 'Ước tính — Mod xác nhận sau khi slice' : t('payLater')}
+                        {!isSelf ? bw.modConfirmAfterSlice : t('payLater')}
                       </p>
                     </div>
                   )}
-                  {/* Tự in + Own: free */}
+                  {/* Self + Own: free */}
                   {isSelf && !isLabMaterial && (
                     <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
                       <p className="text-xs text-slate-500 mb-1">{t('costEstimate')}</p>
-                      <p className="text-xl font-black text-emerald-600">0đ — Miễn phí</p>
-                      <p className="text-[11px] text-slate-400 mt-1">Tự mang nhựa không tính phí vật liệu</p>
+                      <p className="text-xl font-black text-emerald-600">{bw.freeTotal}</p>
+                      <p className="text-[11px] text-slate-400 mt-1">{bw.ownMaterialFreeNote}</p>
                     </div>
                   )}
                   {/* In hộ + Own + 0 service fee note */}
@@ -984,7 +990,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                         <span className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider">{loc}</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {printers.filter(p => (p.location || 'Khác') === loc).map((printer) => (
+                        {printers.filter(p => (p.location || clr.other) === loc).map((printer) => (
                           <div
                             key={printer.id}
                             onClick={() => printer.status !== 'Maintenance' && setFormData(f => ({ ...f, printerId: printer.id }))}
@@ -1038,7 +1044,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                   ))}
                 </div>
               )}
-              <p className="text-xs text-slate-400 italic">Bỏ qua nếu chưa biết — Moderator sẽ xếp máy phù hợp.</p>
+              <p className="text-xs text-slate-400 italic">{bw.printerSkipNote}</p>
             </div>
 
             {/* Schedule */}
@@ -1070,21 +1076,21 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                   <div className="space-y-2">
                     {TIME_SLOTS.map(slot => (
                       <button
-                        key={slot.label}
-                        onClick={() => setFormData(f => ({ ...f, preferredSlot: slot.label, preferredSubSlot: '' }))}
+                        key={slot.key}
+                        onClick={() => setFormData(f => ({ ...f, preferredSlot: slot.key, preferredSubSlot: '' }))}
                         className={cn(
                           'w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left',
-                          formData.preferredSlot === slot.label ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-100 dark:border-slate-800 hover:border-blue-200'
+                          formData.preferredSlot === slot.key ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-100 dark:border-slate-800 hover:border-blue-200'
                         )}
                       >
-                        <span className={cn('text-sm font-bold', formData.preferredSlot === slot.label ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300')}>{slot.label}</span>
-                        <span className={cn('text-xs', formData.preferredSlot === slot.label ? 'text-blue-500' : 'text-slate-400')}>{slot.range}</span>
+                        <span className={cn('text-sm font-bold', formData.preferredSlot === slot.key ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300')}>{slot.label}</span>
+                        <span className={cn('text-xs', formData.preferredSlot === slot.key ? 'text-blue-500' : 'text-slate-400')}>{slot.range}</span>
                       </button>
                     ))}
                   </div>
                   {formData.preferredSlot && SUB_SLOTS[formData.preferredSlot] && (
                     <div className="pt-2">
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Khung giờ ưu tiên trong ca (recommend)</p>
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">{bw.subSlotLabel}</p>
                       <div className="flex flex-wrap gap-2">
                         {SUB_SLOTS[formData.preferredSlot].map(sub => (
                           <button
@@ -1099,7 +1105,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                           >{sub}</button>
                         ))}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1.5">Tùy chọn — Moderator sẽ xác nhận lịch cụ thể.</p>
+                      <p className="text-[11px] text-slate-400 mt-1.5">{bw.subSlotHint}</p>
                     </div>
                   )}
                 </div>
@@ -1107,7 +1113,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
               <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-xl flex gap-3">
                 <Info className="text-amber-600 shrink-0" size={18} />
                 <p className="text-xs text-amber-800 dark:text-amber-400 leading-relaxed">
-                  <strong>Lưu ý:</strong> {t('scheduleNote')}
+                  <strong>{bw.noteLabel}:</strong> {t('scheduleNote')}
                 </p>
               </div>
             </div>
@@ -1140,7 +1146,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                   <div className="text-slate-500">Job:</div>
                   <div className="font-bold text-slate-900 dark:text-white">{formData.jobName || t('notNamed')}</div>
 
-                  <div className="text-slate-500">Hình thức:</div>
+                  <div className="text-slate-500">{bw.reviewFormLabel}:</div>
                   <div className="font-bold text-slate-900 dark:text-white">
                     {isSelf ? t('selfPrint') : t('labAssisted')}
                   </div>
@@ -1205,7 +1211,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                     <>
                       <div className="text-slate-500">{t('preferredDate')}:</div>
                       <div className="font-bold text-slate-900 dark:text-white">
-                        {new Date(formData.preferredDate + 'T12:00:00').toLocaleDateString('vi-VN')} – {formData.preferredSlot}{formData.preferredSubSlot ? ` (${formData.preferredSubSlot})` : ''}
+                        {new Date(formData.preferredDate + 'T12:00:00').toLocaleDateString('vi-VN')} – {TIME_SLOTS.find(s => s.key === formData.preferredSlot)?.label || formData.preferredSlot}{formData.preferredSubSlot ? ` (${formData.preferredSubSlot})` : ''}
                       </div>
                     </>
                   )}
@@ -1224,25 +1230,25 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('costEstimate')}</span>
                 {isSelf && !isLabMaterial ? (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-500">Tự mang nhựa — miễn phí</span>
+                    <span className="text-sm text-slate-500">{bw.reviewOwnFree}</span>
                     <span className="text-xl font-black text-emerald-600">0đ</span>
                   </div>
                 ) : (
                   <>
                     {isLabMaterial && (
                       <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-                        <span>Vật liệu: {formData.estimatedGrams}g × {getPricePerGram().toLocaleString()}đ/g</span>
+                        <span>{bw.materialCostLabel}: {formData.estimatedGrams}g × {getPricePerGram().toLocaleString()}đ/g</span>
                         <span className="font-bold">{matCost.toLocaleString()}đ</span>
                       </div>
                     )}
                     {!isSelf && getServiceFeePerGram() > 0 && (
                       <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-                        <span>Phí in hộ: {formData.estimatedGrams}g × {getServiceFeePerGram().toLocaleString()}đ/g</span>
+                        <span>{bw.serviceCostLabel}: {formData.estimatedGrams}g × {getServiceFeePerGram().toLocaleString()}đ/g</span>
                         <span className="font-bold">{svcCost.toLocaleString()}đ</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center pt-1 border-t border-slate-200 dark:border-slate-700">
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Tổng</span>
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{bw.reviewTotal}</span>
                       {isSelf ? (
                         <div className="text-right">
                           <span className="text-xl font-black text-blue-600">{totalCost.toLocaleString()}đ</span>
@@ -1251,7 +1257,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                       ) : (
                         <div className="text-right">
                           <span className="text-xl font-black text-amber-600">{totalCost.toLocaleString()}đ</span>
-                          <p className="text-[10px] text-slate-400">Ước tính — Mod xác nhận sau khi slice</p>
+                          <p className="text-[10px] text-slate-400">{bw.modConfirmAfterSlice}</p>
                         </div>
                       )}
                     </div>
@@ -1289,30 +1295,30 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
       <section className="app-panel app-hover-box p-5 sm:p-6 md:p-8">
         <div className="mx-auto max-w-4xl space-y-6 text-center">
           <div className="space-y-3">
-            <p className="app-eyebrow">// Đặt in</p>
+            <p className="app-eyebrow">{bw.heroEyebrow}</p>
             <h2 className="app-display-sm text-slate-900 dark:text-[var(--landing-text)]">
-              Gửi yêu cầu in 3D
+              {bw.heroTitle}
             </h2>
             <p className="mx-auto max-w-3xl text-sm leading-7 text-slate-600 dark:text-[var(--landing-muted)]">
-              Hoàn tất từng bước để chọn hình thức in, vật liệu, file và lịch mong muốn trước khi đưa yêu cầu vào hàng chờ.
+              {bw.heroDesc}
             </p>
           </div>
 
           <div className="grid gap-3 text-left sm:grid-cols-3">
             <div className="app-panel-soft border p-4">
-              <p className="app-overline">Bước hiện tại</p>
+              <p className="app-overline">{bw.currentStep}</p>
               <p className="mt-2 text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">
                 {step}. {steps.find((item) => item.id === step)?.label}
               </p>
             </div>
             <div className="app-panel-soft border p-4">
-              <p className="app-overline">Hình thức</p>
+              <p className="app-overline">{bw.printModeLabel}</p>
               <p className="mt-2 text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">
                 {isSelf ? t('selfPrint') : t('labAssisted')}
               </p>
             </div>
             <div className="app-panel-soft border p-4">
-              <p className="app-overline">Vật liệu</p>
+              <p className="app-overline">{bw.materialLabel}</p>
               <p className="mt-2 text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">
                 {isLabMaterial ? t('labMaterial') : t('ownMaterial')}
               </p>
@@ -1358,7 +1364,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
                               : 'text-slate-500 dark:text-[var(--landing-muted)]'
                         )}
                       >
-                        Bước {s.id}
+                        {bw.stepPrefix} {s.id}
                       </span>
                       <span className="block max-w-[88px] text-xs font-semibold leading-5 text-slate-700 dark:text-[var(--landing-text)]">
                         {s.label}
@@ -1408,7 +1414,7 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
               {step !== 5 && <ChevronRight size={18} />}
             </button>
             <p className="text-xs leading-6 text-slate-500 dark:text-[var(--landing-muted)]">
-              {step === 5 ? 'Kiểm tra lại thông tin trước khi gửi vào hàng chờ.' : 'Bạn có thể quay lại bước trước để chỉnh lại thông tin.'}
+              {step === 5 ? bw.submitHint : bw.editHint}
             </p>
           </div>
         </div>

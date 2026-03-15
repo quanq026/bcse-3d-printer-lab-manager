@@ -17,6 +17,7 @@ import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
 import { cn } from '../lib/utils';
+import type { PrintJob, Printer, PricingRule, ServiceFee } from '../types';
 import { JobStatus, MaterialSource } from '../types';
 
 interface ModeratorQueueProps {
@@ -51,18 +52,18 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
   const shared = text.shared;
   const locale = lang === 'JP' ? 'en-US' : 'vi-VN';
 
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [moderatorNote, setModeratorNote] = useState('');
   const [actualGrams, setActualGrams] = useState('');
   const [search, setSearch] = useState('');
-  const [printers, setPrinters] = useState<any[]>([]);
+  const [printers, setPrinters] = useState<Printer[]>([]);
   const [quoteGrams, setQuoteGrams] = useState('');
   const [quoteSaving, setQuoteSaving] = useState(false);
-  const [pricing, setPricing] = useState<any[]>([]);
-  const [serviceFees, setServiceFees] = useState<any[]>([]);
+  const [pricing, setPricing] = useState<PricingRule[]>([]);
+  const [serviceFees, setServiceFees] = useState<ServiceFee[]>([]);
 
   const statusLabel = (value: JobStatus | string) => shared.jobStatuses[value as keyof typeof shared.jobStatuses] || value;
   const materialSourceLabel = (value: MaterialSource | string) => shared.materialSources[value as keyof typeof shared.materialSources] || value;
@@ -73,8 +74,8 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
       const data = await api.getJobs();
       setJobs(data);
 
-      const nextSelection = data.find((job: any) => job.id === selectedId)
-        || data.find((job: any) => ACTIVE_STATUSES.includes(job.status))
+      const nextSelection = data.find((job: PrintJob) => job.id === selectedId)
+        || data.find((job: PrintJob) => ACTIVE_STATUSES.includes(job.status))
         || data[0];
 
       setSelectedId(nextSelection?.id || null);
@@ -120,8 +121,8 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
       await fetchJobs();
       setModeratorNote('');
       setActualGrams('');
-    } catch (err: any) {
-      alert(err.message || copy.actionError);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : copy.actionError);
     } finally {
       setActionLoading(false);
     }
@@ -132,8 +133,8 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
     try {
       await api.updateJob(selectedJob.id, { printerId: printerId || null });
       await fetchJobs();
-    } catch (err: any) {
-      alert(err.message || copy.updateError);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : copy.updateError);
     }
   };
 
@@ -147,8 +148,8 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
     try {
       await api.updateJob(selectedJob.id, { status: newStatus });
       await fetchJobs();
-    } catch (err: any) {
-      alert(err.message || copy.updateError);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : copy.updateError);
     } finally {
       setActionLoading(false);
     }
@@ -165,9 +166,9 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
     }
 
     const grams = Number.parseInt(quoteGrams, 10) || selectedJob.estimatedGrams || 0;
-    const pricingRule = pricing.find((item: any) => item.material === selectedJob.materialType);
+    const pricingRule = pricing.find((item: PricingRule) => item.material === selectedJob.materialType);
     const materialCost = (pricingRule?.pricePerGram || 0) * grams;
-    const serviceFee = serviceFees.find((item: any) => item.name === 'service_fee');
+    const serviceFee = serviceFees.find((item: ServiceFee) => item.name === 'service_fee');
     const serviceCost = (serviceFee?.enabled !== false ? serviceFee?.amount || 0 : 0) * grams;
     const totalCost = materialCost + serviceCost;
 
@@ -208,8 +209,8 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
               await fetchJobs();
               setQuoteGrams('');
               alert(copy.quoteSaved);
-            } catch (err: any) {
-              alert(err.message || copy.updateError);
+            } catch (err: unknown) {
+              alert(err instanceof Error ? err.message : copy.updateError);
             } finally {
               setQuoteSaving(false);
             }
@@ -285,7 +286,7 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
                 onChange={(event) => handlePrinterAssign(event.target.value)}
               >
                 <option value="">{shared.choosePrinter}</option>
-                {printers.map((printer: any) => (
+                {printers.map((printer: Printer) => (
                   <option key={printer.id} value={printer.id}>
                     {printer.name} ({printer.status})
                   </option>
@@ -354,7 +355,7 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
                 onChange={(event) => handlePrinterAssign(event.target.value)}
               >
                 <option value="">{shared.choosePrinter}</option>
-                {printers.map((printer: any) => (
+                {printers.map((printer: Printer) => (
                   <option key={printer.id} value={printer.id}>
                     {printer.name}
                   </option>
@@ -470,7 +471,7 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
                         {job.estimatedTime || shared.noDuration}
                       </p>
                       <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 dark:text-white/38">
-                        {job.materialType} · {job.color} · {materialSourceLabel(job.materialSource)}
+                        {job.materialType} ï¿½ {job.color} ï¿½ {materialSourceLabel(job.materialSource)}
                       </p>
                     </div>
                   </button>

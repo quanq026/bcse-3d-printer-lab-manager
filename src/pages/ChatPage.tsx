@@ -1,37 +1,28 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Send, RefreshCw, Loader2, User, ShieldCheck, Crown, Clock3, MessagesSquare } from 'lucide-react';
+import { MessageCircle, Send, RefreshCw, Loader2, User as UserIcon, ShieldCheck, Crown, Clock3, MessagesSquare } from 'lucide-react';
 import { api } from '../lib/api';
 import { cn } from '../lib/utils';
-
-interface Message {
-  id: string;
-  userId: string;
-  userName: string;
-  userRole: string;
-  jobId?: string;
-  content: string;
-  createdAt: string;
-}
+import { useLang } from '../contexts/LanguageContext';
+import { getUiText, fillText } from '../lib/uiText';
+import type { Message as ChatMessage, PrintJob, User as AppUser } from '../types';
+import type { LucideIcon } from 'lucide-react';
 
 interface ChatPageProps {
-  currentUser: any;
+  currentUser: AppUser | null;
 }
 
-const ROLE_BADGE: Record<string, { label: string; className: string; icon: any }> = {
+const ROLE_BADGE_STYLE: Record<string, { className: string; icon: LucideIcon }> = {
   Admin: {
-    label: 'Quản trị',
     className: 'border border-red-200 bg-red-50 text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300',
     icon: Crown,
   },
   Moderator: {
-    label: 'Điều phối',
     className: 'border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300',
     icon: ShieldCheck,
   },
   Student: {
-    label: 'Sinh viên',
     className: 'border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-300',
-    icon: User,
+    icon: UserIcon,
   },
 };
 
@@ -41,12 +32,19 @@ function formatTime(iso: string) {
 }
 
 export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { lang } = useLang();
+  const copy = getUiText(lang);
+  const ROLE_LABELS: Record<string, string> = {
+    Admin: copy.chat.roleBadgeAdmin,
+    Moderator: copy.chat.roleBadgeModerator,
+    Student: copy.chat.roleBadgeStudent,
+  };
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [content, setContent] = useState('');
   const [jobId, setJobId] = useState('');
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<PrintJob[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -54,7 +52,7 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
     try {
       const data = await api.getMessages();
       setMessages(data.slice().reverse());
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -83,8 +81,8 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
       const msg = await api.sendMessage(content.trim(), jobId || undefined);
       setMessages((prev) => [...prev, msg]);
       setContent('');
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSending(false);
     }
@@ -102,31 +100,31 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
       <section className="app-panel app-hover-box p-5 sm:p-6">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)] xl:items-start">
           <div className="space-y-3">
-            <p className="app-eyebrow">// Trao đổi</p>
+            <p className="app-eyebrow">{copy.chat.eyebrow}</p>
             <div className="space-y-3">
               <h2 className="app-display-sm flex items-center gap-3 text-slate-900 dark:text-[var(--landing-text)]">
                 <MessageCircle size={28} className="text-[var(--landing-accent-strong)]" />
-                Kênh trao đổi của lab
+                {copy.chat.channelTitle}
               </h2>
               <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-[var(--landing-muted)]">
-                Dùng mục này để hỏi về trạng thái đơn, nhắc moderator duyệt file hoặc trao đổi trực tiếp khi cần điều chỉnh yêu cầu in.
+                {copy.chat.channelDesc}
               </p>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
             <div className="app-panel-soft border p-4">
-              <p className="app-overline">Tự làm mới</p>
+              <p className="app-overline">{copy.chat.autoRefresh}</p>
               <p className="mt-2 flex items-center gap-2 text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">
                 <Clock3 size={14} className="text-[var(--landing-accent-strong)]" />
-                Mỗi 15 giây
+                {copy.chat.every15s}
               </p>
             </div>
             <div className="app-panel-soft border p-4">
-              <p className="app-overline">Tin nhắn</p>
+              <p className="app-overline">{copy.chat.messages}</p>
               <p className="mt-2 flex items-center gap-2 text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">
                 <MessagesSquare size={14} className="text-[var(--landing-accent-strong)]" />
-                {messages.length} mục hiển thị
+                {fillText(copy.chat.itemsVisible, { count: messages.length })}
               </p>
             </div>
             <button
@@ -135,10 +133,10 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
                 fetchMessages().finally(() => setLoading(false));
               }}
               className="app-secondary-button flex min-h-[64px] items-center justify-center gap-2 px-4 font-bold uppercase tracking-[0.16em] text-slate-700 dark:text-[var(--landing-text)]"
-              title="Làm mới"
+              title={copy.chat.refresh}
             >
               <RefreshCw size={16} />
-              Làm mới
+              {copy.chat.refresh}
             </button>
           </div>
         </div>
@@ -147,24 +145,24 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
       <div className="min-h-0 grid flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
         <section className="app-panel app-hover-box flex min-h-0 flex-col overflow-hidden border">
           <div className="border-b border-[rgba(30,23,19,0.08)] px-5 py-4 dark:border-white/8">
-            <p className="app-overline">Dòng hội thoại</p>
+            <p className="app-overline">{copy.chat.threadTitle}</p>
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
             {loading ? (
               <div className="flex h-full items-center justify-center text-slate-500 dark:text-[var(--landing-muted)]">
                 <Loader2 size={24} className="mr-2 animate-spin" />
-                <span>Đang tải tin nhắn...</span>
+                <span>{copy.chat.loadingMessages}</span>
               </div>
             ) : messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-400 dark:text-[var(--landing-muted)]">
                 <MessageCircle size={40} className="opacity-30" />
-                <p className="text-sm">Chưa có tin nhắn nào. Bạn có thể mở đầu cuộc trao đổi trước.</p>
+                <p className="text-sm">{copy.chat.noMessages}</p>
               </div>
             ) : (
               messages.map((msg) => {
                 const isMe = msg.userId === currentUser?.id;
-                const badge = ROLE_BADGE[msg.userRole] || ROLE_BADGE.Student;
+                const badge = ROLE_BADGE_STYLE[msg.userRole] || ROLE_BADGE_STYLE.Student;
                 const BadgeIcon = badge.icon;
 
                 return (
@@ -183,11 +181,11 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
                     <div className={cn('max-w-[88%] space-y-2 sm:max-w-[76%]', isMe && 'flex flex-col items-end')}>
                       <div className={cn('flex flex-wrap items-center gap-2 text-xs', isMe && 'flex-row-reverse')}>
                         <span className="font-semibold text-slate-700 dark:text-[var(--landing-text)]">
-                          {isMe ? 'Bạn' : msg.userName}
+                          {isMe ? copy.chat.you : msg.userName}
                         </span>
                         <span className={cn('inline-flex items-center gap-1 px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em]', badge.className)}>
                           <BadgeIcon size={10} />
-                          {badge.label}
+                          {ROLE_LABELS[msg.userRole] || ROLE_LABELS.Student}
                         </span>
                         {msg.jobId && (
                           <span className="border border-[rgba(239,125,87,0.2)] bg-[rgba(239,125,87,0.12)] px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--landing-accent-strong)]">
@@ -218,14 +216,14 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
 
         <aside className="app-panel app-hover-box flex flex-col gap-3 border p-4 sm:p-5">
           <div className="space-y-2">
-            <p className="app-overline">Gắn với đơn</p>
-            <label className="text-sm font-semibold text-slate-700 dark:text-[var(--landing-text)]">Nhắc theo mã đơn</label>
+            <p className="app-overline">{copy.chat.attachJob}</p>
+            <label className="text-sm font-semibold text-slate-700 dark:text-[var(--landing-text)]">{copy.chat.jobCodeLabel}</label>
             <select
               value={jobId}
               onChange={(e) => setJobId(e.target.value)}
               className="app-control"
             >
-              <option value="">Không gắn đơn cụ thể</option>
+              <option value="">{copy.chat.noJobAttached}</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>{j.id} - {j.jobName} ({j.status})</option>
               ))}
@@ -233,13 +231,13 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
           </div>
 
           <div className="space-y-2">
-            <p className="app-overline">Soạn tin nhắn</p>
+            <p className="app-overline">{copy.chat.composeTitle}</p>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={7}
-              placeholder="Nhập nội dung cần trao đổi... Enter để gửi, Shift + Enter để xuống dòng."
+              placeholder={copy.chat.composePlaceholder}
               className="app-control min-h-[168px] resize-none py-3"
             />
           </div>
@@ -251,10 +249,10 @@ export const ChatPage: React.FC<ChatPageProps> = ({ currentUser }) => {
               className="app-primary-button flex w-full items-center justify-center gap-2 px-4 text-sm font-black uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-              Gửi tin nhắn
+              {copy.chat.send}
             </button>
             <p className="text-xs leading-6 text-slate-500 dark:text-[var(--landing-muted)]">
-              Tin nhắn của bạn sẽ được hiển thị cho sinh viên, moderator và quản trị viên có quyền theo dõi hệ thống.
+              {copy.chat.sendNote}
             </p>
           </div>
         </aside>

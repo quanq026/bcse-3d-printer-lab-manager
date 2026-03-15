@@ -7,17 +7,20 @@ import {
   RefreshCw,
   User,
 } from 'lucide-react';
-import { StatusChip, STATUS_LABELS } from '../components/StatusChip';
+import { StatusChip } from '../components/StatusChip';
 import { api } from '../lib/api';
 import { cn } from '../lib/utils';
+import { useLang } from '../contexts/LanguageContext';
+import { getUiText, fillText } from '../lib/uiText';
+import type { User as AppUser, PrintJob } from '../types';
 import { JobStatus } from '../types';
 
 interface QueuePageProps {
-  currentUser: any;
+  currentUser: AppUser | null;
 }
 
-function formatDateTime(value?: string) {
-  if (!value) return 'Chưa có thời gian';
+function formatDateTime(value?: string, fallback = 'Chưa có thời gian') {
+  if (!value) return fallback;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
   return new Intl.DateTimeFormat('vi-VN', {
@@ -29,7 +32,9 @@ function formatDateTime(value?: string) {
 }
 
 export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
-  const [jobs, setJobs] = useState<any[]>([]);
+  const { lang } = useLang();
+  const copy = getUiText(lang);
+  const [jobs, setJobs] = useState<PrintJob[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchQueue = async () => {
@@ -58,24 +63,24 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
 
   const summaryCards = [
     {
-      label: 'Lệnh trong hàng',
+      label: copy.queuePage.cardQueueCount,
       value: jobs.length,
-      note: 'Toàn bộ yêu cầu đang hiện diện trong hàng chờ in.',
+      note: copy.queuePage.cardQueueNote,
     },
     {
-      label: 'Lệnh của bạn',
+      label: copy.queuePage.cardMyJobs,
       value: myJobs.length,
-      note: myJobs.length > 0 ? 'Các yêu cầu của bạn đang được đánh dấu xuyên suốt danh sách.' : 'Bạn chưa có yêu cầu nào xuất hiện trong hàng chờ hiện tại.',
+      note: myJobs.length > 0 ? copy.queuePage.cardMyJobsHasNote : copy.queuePage.cardMyJobsEmptyNote,
     },
     {
-      label: 'Chờ duyệt',
+      label: copy.queuePage.cardReview,
       value: reviewCount,
-      note: 'Các yêu cầu đang chờ moderator kiểm tra trước khi xếp lịch.',
+      note: copy.queuePage.cardReviewNote,
     },
     {
-      label: 'Đang in',
+      label: copy.queuePage.cardPrinting,
       value: printingCount,
-      note: 'Những công việc hiện đã được đưa lên máy in.',
+      note: copy.queuePage.cardPrintingNote,
     },
   ];
 
@@ -83,10 +88,10 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
     <div className="space-y-6">
       <section className="app-panel grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:px-8 lg:py-8">
         <div>
-          <p className="app-eyebrow">// Hàng đợi</p>
-          <h2 className="app-display-sm mt-3">Nhìn rõ vị trí của từng yêu cầu trong hàng chờ.</h2>
+          <p className="app-eyebrow">{copy.queuePage.heroEyebrow}</p>
+          <h2 className="app-display-sm mt-3">{copy.queuePage.heroTitle}</h2>
           <p className="app-subtle-copy mt-4 max-w-2xl text-sm sm:text-base">
-            Danh sách này phản ánh đúng thứ tự xử lý hiện tại. Yêu cầu nộp sớm sẽ nằm cao hơn, còn trạng thái cho biết công việc đang ở bước nào trong quy trình.
+            {copy.queuePage.heroDesc}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <button
@@ -94,7 +99,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
               className="app-primary-button inline-flex min-w-[220px] items-center justify-center gap-2 px-5 text-sm font-black uppercase tracking-[0.16em]"
             >
               <RefreshCw size={18} />
-              Làm mới hàng đợi
+              {copy.queuePage.refreshQueue}
             </button>
           </div>
         </div>
@@ -117,16 +122,16 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
         <section className="app-panel border-[rgba(239,125,87,0.2)] bg-[linear-gradient(135deg,rgba(255,247,237,0.92),rgba(255,240,228,0.9))] px-6 py-5 dark:border-[rgba(239,125,87,0.16)] dark:bg-[linear-gradient(135deg,rgba(239,125,87,0.12),rgba(240,179,91,0.06))]">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="app-eyebrow">// Yêu cầu của bạn</p>
+              <p className="app-eyebrow">{copy.queuePage.myRequestsEyebrow}</p>
               <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">
                 {myJobs.map((job) => {
                   const position = jobs.findIndex((queueJob) => queueJob.id === job.id) + 1;
-                  return `${job.jobName} ở vị trí #${position}`;
+                  return fillText(copy.queuePage.jobPosition, { name: job.jobName, position });
                 }).join(' · ')}
               </p>
             </div>
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-[var(--landing-muted)]">
-              Các hàng được đánh dấu để bạn theo dõi nhanh hơn
+              {copy.queuePage.highlightedNote}
             </p>
           </div>
         </section>
@@ -136,18 +141,18 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
         <div className="app-panel overflow-hidden">
           <div className="flex flex-col gap-3 border-b border-[rgba(30,23,19,0.08)] px-6 py-5 dark:border-white/8 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="app-overline">// Danh sách hàng chờ</p>
-              <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-[var(--landing-text)]">Thứ tự xử lý hiện tại</h3>
+              <p className="app-overline">{copy.queuePage.listEyebrow}</p>
+              <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-[var(--landing-text)]">{copy.queuePage.listTitle}</h3>
             </div>
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-[var(--landing-muted)]">
-              Ưu tiên từ trên xuống dưới
+              {copy.queuePage.priorityNote}
             </p>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center gap-2 px-6 py-16 text-slate-500 dark:text-[var(--landing-muted)]">
               <Loader2 size={22} className="animate-spin" />
-              <span className="text-sm">Đang tải hàng chờ...</span>
+              <span className="text-sm">{copy.queuePage.loading}</span>
             </div>
           ) : jobs.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
@@ -155,9 +160,9 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
                 <Clock size={28} strokeWidth={1.4} />
               </div>
               <div>
-                <p className="text-base font-semibold text-slate-900 dark:text-[var(--landing-text)]">Hiện chưa có yêu cầu nào trong hàng chờ.</p>
+                <p className="text-base font-semibold text-slate-900 dark:text-[var(--landing-text)]">{copy.queuePage.emptyTitle}</p>
                 <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-[var(--landing-muted)]">
-                  Khi có yêu cầu mới được đưa vào luồng xử lý, danh sách này sẽ tự hiển thị thứ tự chờ tương ứng.
+                  {copy.queuePage.emptyDesc}
                 </p>
               </div>
             </div>
@@ -180,7 +185,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
                             <span className="app-overline">#{index + 1}</span>
                             {isMine && (
                               <span className="inline-flex min-h-[24px] items-center border border-[rgba(239,125,87,0.22)] bg-[rgba(239,125,87,0.12)] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--landing-accent)]">
-                                Của bạn
+                                {copy.queuePage.yours}
                               </span>
                             )}
                           </div>
@@ -201,11 +206,11 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
                         </p>
                         <p className="inline-flex items-center gap-2">
                           <Calendar size={12} />
-                          {job.slotTime || 'Chưa xếp lịch'}
+                          {job.slotTime || copy.queuePage.notScheduled}
                         </p>
                         <p className="inline-flex items-center gap-2">
                           <Clock size={12} />
-                          {formatDateTime(job.createdAt)}
+                          {formatDateTime(job.createdAt, copy.queuePage.noTime)}
                         </p>
                       </div>
                     </article>
@@ -217,13 +222,13 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
                 <table className="app-table">
                   <thead>
                     <tr>
-                      <th>Vị trí</th>
-                      <th>Yêu cầu</th>
-                      <th>Người gửi</th>
-                      <th>Vật liệu</th>
-                      <th>Ca / lịch</th>
-                      <th>Trạng thái</th>
-                      <th>Nộp lúc</th>
+                      <th>{copy.queuePage.thPosition}</th>
+                      <th>{copy.queuePage.thRequest}</th>
+                      <th>{copy.queuePage.thSender}</th>
+                      <th>{copy.queuePage.thMaterial}</th>
+                      <th>{copy.queuePage.thSlot}</th>
+                      <th>{copy.queuePage.thStatus}</th>
+                      <th>{copy.queuePage.thSubmitted}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -241,7 +246,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
                               <span className="text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">{index + 1}</span>
                               {isMine && (
                                 <span className="inline-flex min-h-[24px] items-center border border-[rgba(239,125,87,0.22)] bg-[rgba(239,125,87,0.12)] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--landing-accent)]">
-                                  Của bạn
+                                  {copy.queuePage.yours}
                                 </span>
                               )}
                             </div>
@@ -262,13 +267,13 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
                             </div>
                           </td>
                           <td className="px-6 py-5 align-top">
-                            <span className="text-sm text-slate-600 dark:text-[var(--landing-muted)]">{job.slotTime || 'Chưa xếp lịch'}</span>
+                            <span className="text-sm text-slate-600 dark:text-[var(--landing-muted)]">{job.slotTime || copy.queuePage.notScheduled}</span>
                           </td>
                           <td className="px-6 py-5 align-top">
                             <StatusChip status={job.status as JobStatus} />
                           </td>
                           <td className="px-6 py-5 align-top">
-                            <span className="text-sm text-slate-500 dark:text-[var(--landing-muted)]">{formatDateTime(job.createdAt)}</span>
+                            <span className="text-sm text-slate-500 dark:text-[var(--landing-muted)]">{formatDateTime(job.createdAt, copy.queuePage.noTime)}</span>
                           </td>
                         </tr>
                       );
@@ -282,16 +287,16 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
 
         <aside className="space-y-5">
           <section className="app-panel px-5 py-5">
-            <p className="app-overline">// Nguyên tắc xếp hàng</p>
+            <p className="app-overline">{copy.queuePage.rulesEyebrow}</p>
             <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-[var(--landing-muted)]">
-              <p>Nộp sớm hơn sẽ đứng trước trong danh sách chờ.</p>
-              <p>Trạng thái được cập nhật ngay khi moderator duyệt hoặc đưa lệnh lên máy.</p>
-              <p>Các yêu cầu của bạn luôn được đánh dấu để theo dõi nhanh hơn.</p>
+              <p>{copy.queuePage.rule1}</p>
+              <p>{copy.queuePage.rule2}</p>
+              <p>{copy.queuePage.rule3}</p>
             </div>
           </section>
 
           <section className="app-panel px-5 py-5">
-            <p className="app-overline">// Trạng thái hiện có</p>
+            <p className="app-overline">{copy.queuePage.statusesEyebrow}</p>
             <div className="mt-4 flex flex-wrap gap-3">
               {[
                 JobStatus.SUBMITTED,
@@ -302,7 +307,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
               ].map((status) => (
                 <div key={status} className="inline-flex items-center gap-2">
                   <StatusChip status={status} />
-                  <span className="text-xs text-slate-500 dark:text-[var(--landing-muted)]">{STATUS_LABELS[status]}</span>
+                  <span className="text-xs text-slate-500 dark:text-[var(--landing-muted)]">{copy.shared.jobStatuses[status]}</span>
                 </div>
               ))}
             </div>

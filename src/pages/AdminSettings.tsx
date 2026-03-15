@@ -47,8 +47,8 @@ export const AdminSettings: React.FC = () => {
       await api.updateSettings(settings);
       setSuccess(copy.success);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : shared.unknownError);
     } finally {
       setSaving(false);
     }
@@ -129,4 +129,3 @@ export const AdminSettings: React.FC = () => {
     </div>
   );
 };
-

@@ -15,6 +15,7 @@ import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
 import { cn } from '../lib/utils';
 import { StatusChip } from '../components/StatusChip';
+import type { User, PrintJob, DashboardStats, DailyStat } from '../types';
 import { JobStatus, Role } from '../types';
 
 interface StudentDashboardProps {
@@ -22,7 +23,7 @@ interface StudentDashboardProps {
   onSelectJob: (id: string) => void;
   onPageChange: (page: string) => void;
   role: Role;
-  currentUser: any;
+  currentUser: User | null;
   activePage?: string;
 }
 
@@ -82,9 +83,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
   const sidebarCopy = ui.sidebar.nav;
   const isOpsRole = role !== Role.STUDENT;
   const locale = lang === 'JP' ? 'en-US' : 'vi-VN';
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [dailyStats, setDailyStats] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<PrintJob[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState('all');
@@ -137,9 +138,20 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
   const pendingJobs = myJobs.filter((job) => [JobStatus.SUBMITTED, JobStatus.PENDING_REVIEW, JobStatus.APPROVED, JobStatus.SCHEDULED].includes(job.status as JobStatus));
   const printingJobs = myJobs.filter((job) => job.status === JobStatus.PRINTING);
   const doneJobs = myJobs.filter((job) => job.status === JobStatus.DONE);
-  const maxDailyTotal = Math.max(...dailyStats.map((day: any) => day.approved + day.done + day.rejected + day.needsRevision), 1);
+  const maxDailyTotal = Math.max(...dailyStats.map((day: DailyStat) => day.approved + day.done + day.rejected + day.needsRevision), 1);
 
   const opsHistoryFilters = [
+    { value: 'all', label: adminCopy.historyFilters.all },
+    { value: JobStatus.SUBMITTED, label: shared.jobStatuses[JobStatus.SUBMITTED] },
+    { value: JobStatus.APPROVED, label: shared.jobStatuses[JobStatus.APPROVED] },
+    { value: JobStatus.PRINTING, label: shared.jobStatuses[JobStatus.PRINTING] },
+    { value: JobStatus.DONE, label: shared.jobStatuses[JobStatus.DONE] },
+    { value: JobStatus.REJECTED, label: shared.jobStatuses[JobStatus.REJECTED] },
+    { value: JobStatus.CANCELLED, label: shared.jobStatuses[JobStatus.CANCELLED] },
+    { value: JobStatus.NEEDS_REVISION, label: shared.jobStatuses[JobStatus.NEEDS_REVISION] },
+  ];
+
+  const studentHistoryFilters = [
     { value: 'all', label: adminCopy.historyFilters.all },
     { value: JobStatus.SUBMITTED, label: shared.jobStatuses[JobStatus.SUBMITTED] },
     { value: JobStatus.APPROVED, label: shared.jobStatuses[JobStatus.APPROVED] },
@@ -203,7 +215,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
     },
   ];
 
-  const renderOpsJobCard = (job: any) => (
+  const renderOpsJobCard = (job: PrintJob) => (
     <button
       key={job.id}
       onClick={() => onSelectJob(job.id)}
@@ -227,7 +239,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
     </button>
   );
 
-  const renderOpsJobsTable = (tableJobs: any[]) => (
+  const renderOpsJobsTable = (tableJobs: PrintJob[]) => (
     <div className="hidden overflow-x-auto md:block">
       <table className="app-table">
         <thead>
@@ -556,10 +568,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               <section className="app-panel px-5 py-5">
                 <p className="app-overline">{adminCopy.sevenDayEyebrow}</p>
                 <div className="mt-4 flex h-32 items-end gap-2">
-                  {dailyStats.map((day: any) => {
+                  {dailyStats.map((day: DailyStat) => {
                     const total = day.approved + day.done + day.rejected + day.needsRevision;
-                    const doneHeight = total ? Math.max((day.done / maxDailyTotal) * 88, day.done ? 6 : 0) : 4;
-                    const approvedHeight = total ? Math.max((day.approved / maxDailyTotal) * 88, day.approved ? 6 : 0) : 0;
+                    const doneHeight = day.done ? Math.max((day.done / maxDailyTotal) * 88, 6) : 0;
+                    const approvedHeight = day.approved ? Math.max((day.approved / maxDailyTotal) * 88, 6) : 0;
                     const rejectedHeight = day.rejected ? Math.max((day.rejected / maxDailyTotal) * 88, 6) : 0;
                     const revisionHeight = day.needsRevision ? Math.max((day.needsRevision / maxDailyTotal) * 88, 6) : 0;
                     return (
@@ -595,21 +607,21 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
         </section>
       </div>
     );
-  }  const dashboardCopy = role === Role.STUDENT
-    ? 'Theo dõi file, phê duyệt và lịch in mà không bỏ sót tiến độ của bất kỳ yêu cầu nào.'
-    : 'Quan sát áp lực hàng đợi, khối lượng duyệt và nhịp vận hành máy in từ một bảng điều phối duy nhất.';
+  } const dashboardCopy = role === Role.STUDENT
+    ? adminCopy.studentHeroDesc
+    : adminCopy.heroDesc;
 
   const primaryAction = role === Role.STUDENT
     ? {
-      title: 'Tạo yêu cầu in mới.',
-      description: 'Khởi tạo yêu cầu, đính kèm file và đưa công việc vào luồng duyệt với thông tin rõ ràng ngay từ đầu.',
+      title: adminCopy.studentActionsTitle,
+      description: adminCopy.studentActionsDesc,
       label: t('newRequest'),
       icon: 'solar:add-square-bold',
       onClick: onNewBooking,
     }
     : {
-      title: 'Kiểm tra hàng đợi.',
-      description: 'Chỉnh sửa và xếp lịch in.',
+      title: adminCopy.actionsTitle,
+      description: adminCopy.actionsDesc,
       label: t('queue'),
       icon: 'solar:checklist-bold',
       onClick: () => onPageChange('queue'),
@@ -620,12 +632,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
       { id: 'booking', label: t('booking'), icon: 'solar:add-square-bold' },
       { id: 'history', label: t('history'), icon: 'solar:history-bold' },
       { id: 'chat', label: t('chat'), icon: 'solar:chat-round-dots-bold' },
-      { id: 'pricing', label: 'Bảng giá', icon: 'solar:tag-price-bold' },
+      { id: 'pricing', label: sidebarCopy.pricing, icon: 'solar:tag-price-bold' },
     ]
     : role === Role.MODERATOR
       ? [
         { id: 'queue', label: t('queue'), icon: 'solar:checklist-bold' },
-        { id: 'queue-status', label: 'Trạng thái hàng đợi', icon: 'solar:sort-by-time-bold' },
+        { id: 'queue-status', label: adminCopy.quickQueueStatus, icon: 'solar:sort-by-time-bold' },
         { id: 'chat', label: t('chat'), icon: 'solar:chat-round-dots-bold' },
         { id: 'history', label: t('history'), icon: 'solar:history-bold' },
       ]
@@ -640,34 +652,34 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
     {
       label: t('pendingJobs'),
       value: loading ? '...' : pendingJobs.length.toString(),
-      note: 'Đang chờ duyệt hoặc xếp lịch',
+      note: adminCopy.metrics.pending.note,
       icon: 'solar:clock-circle-bold',
       accent: 'text-sky-700 bg-sky-100/80 dark:text-sky-100 dark:bg-sky-300/10',
     },
     {
       label: t('totalJobs'),
       value: loading ? '...' : myJobs.length.toString(),
-      note: 'Tổng số yêu cầu trong phạm vi hiện tại',
+      note: adminCopy.metrics.total.note,
       icon: 'solar:widget-3-bold',
       accent: 'text-[var(--landing-accent)] bg-[rgba(239,125,87,0.12)] dark:text-[#ffd7cc] dark:bg-[rgba(239,125,87,0.12)]',
     },
     {
       label: t('printing'),
       value: loading ? '...' : printingJobs.length.toString(),
-      note: 'Đang chạy trên máy in',
+      note: adminCopy.metrics.printing.note,
       icon: 'solar:printer-2-bold',
       accent: 'text-emerald-700 bg-emerald-100/80 dark:text-emerald-100 dark:bg-emerald-300/10',
     },
     {
       label: t('done'),
       value: loading ? '...' : doneJobs.length.toString(),
-      note: 'Đã hoàn thành và ghi nhận',
+      note: adminCopy.metrics.done.note,
       icon: 'solar:check-square-bold',
       accent: 'text-amber-700 bg-amber-100/80 dark:text-amber-100 dark:bg-amber-300/10',
     },
   ];
 
-  const renderJobCard = (job: any) => (
+  const renderJobCard = (job: PrintJob) => (
     <button
       key={job.id}
       onClick={() => onSelectJob(job.id)}
@@ -685,22 +697,22 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
         </div>
         <div className="flex shrink-0 flex-col items-end gap-3">
           <StatusChip status={job.status as JobStatus} />
-          <span className="text-xs font-semibold text-slate-400 transition-colors group-hover:text-[var(--landing-accent)] dark:text-white/40">Mở</span>
+          <span className="text-xs font-semibold text-slate-400 transition-colors group-hover:text-[var(--landing-accent)] dark:text-white/40">{adminCopy.table.open}</span>
         </div>
       </div>
     </button>
   );
 
-  const renderJobsTable = (tableJobs: any[]) => (
+  const renderJobsTable = (tableJobs: PrintJob[]) => (
     <div className="hidden overflow-x-auto md:block">
       <table className="app-table">
         <thead>
           <tr>
-            <th>Yêu cầu</th>
+            <th>{adminCopy.table.request}</th>
             <th>{t('printerName')}</th>
             <th>{t('materialType')}</th>
-            <th>Trạng thái</th>
-            <th className="text-right">Mở</th>
+            <th>{adminCopy.table.status}</th>
+            <th className="text-right">{adminCopy.table.open}</th>
           </tr>
         </thead>
         <tbody>
@@ -721,7 +733,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               <td className="px-6 py-5 align-top">
                 <div className="flex flex-col text-sm text-slate-600 dark:text-[var(--landing-muted)]">
                   <span>{job.materialType} / {job.color}</span>
-                  <span className="mt-1 text-xs text-slate-400 dark:text-white/40">Tạo ngày {formatDate(job.createdAt)}</span>
+                  <span className="mt-1 text-xs text-slate-400 dark:text-white/40">{fillText(shared.createdOn, { date: formatDateWithLocale(job.createdAt, locale, shared.noDate) })}</span>
                 </div>
               </td>
               <td className="px-6 py-5 align-top">
@@ -734,7 +746,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
                     onSelectJob(job.id);
                   }}
                   className="app-icon-button inline-flex h-10 w-10 items-center justify-center"
-                  aria-label={`Mở ${job.jobName}`}
+                  aria-label={fillText(shared.openItem, { name: job.jobName })}
                 >
                   <ArrowRight size={16} />
                 </button>
@@ -753,12 +765,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
       </div>
       <div>
         <p className="text-base font-semibold text-slate-900 dark:text-[var(--landing-text)]">
-          {isHistoryPage ? 'Không có yêu cầu nào khớp với bộ lọc hiện tại.' : t('noJobs')}
+          {isHistoryPage ? adminCopy.historyEmptyTitle : t('noJobs')}
         </p>
         <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-[var(--landing-muted)]">
           {isHistoryPage
-            ? 'Thử đổi trạng thái hoặc từ khóa tìm kiếm để mở rộng kết quả trong phần lưu trữ.'
-            : 'Hãy tạo yêu cầu in đầu tiên để bắt đầu lấp đầy không gian làm việc này.'}
+            ? adminCopy.historyEmptyDesc
+            : adminCopy.emptyStartDesc}
         </p>
       </div>
       {!isHistoryPage && role === Role.STUDENT && (
@@ -778,10 +790,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
       <div className="space-y-6">
         <section className="app-panel grid gap-5 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8 lg:py-8">
           <div>
-            <p className="app-eyebrow">// Lưu trữ</p>
-            <h2 className="app-display-sm mt-3">Mỗi yêu cầu, một dòng thời gian.</h2>
+            <p className="app-eyebrow">{adminCopy.historyEyebrow}</p>
+            <h2 className="app-display-sm mt-3">{adminCopy.historyTitle}</h2>
             <p className="app-subtle-copy mt-4 max-w-2xl text-sm sm:text-base">
-              Tìm theo tên yêu cầu hoặc mã ID, sau đó lọc theo trạng thái để xem lại toàn bộ hành trình xử lý.
+              {adminCopy.historyDesc}
             </p>
           </div>
           <div className="grid gap-3">
@@ -789,7 +801,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/35" size={16} />
               <input
                 type="text"
-                placeholder="Tìm kiếm yêu cầu"
+                placeholder={adminCopy.historySearchPlaceholder}
                 value={historySearch}
                 onChange={(event) => setHistorySearch(event.target.value)}
                 className="app-control pl-10"
@@ -800,12 +812,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               onChange={(event) => setHistoryFilter(event.target.value)}
               className="app-control"
             >
-              {HISTORY_FILTERS.map((option) => (
+              {studentHistoryFilters.map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
             <div className="app-panel-soft flex items-center justify-between px-4 py-3 text-sm text-slate-600 dark:text-[var(--landing-muted)]">
-              <span>Số yêu cầu khớp</span>
+              <span>{adminCopy.historyMatches}</span>
               <span className="font-semibold text-slate-900 dark:text-[var(--landing-text)]">{loading ? '...' : filteredHistoryJobs.length}</span>
             </div>
           </div>
@@ -836,8 +848,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
     <div className="space-y-6">
       <section className="app-panel grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] lg:px-8 lg:py-8">
         <div>
-          <p className="app-eyebrow">// Bảng điều phối</p>
-          <h2 className="app-display-sm mt-3">{role === Role.STUDENT ? 'Giữ mọi yêu cầu in luôn đúng tiến độ.' : 'Dashboard'}</h2>
+          <p className="app-eyebrow">{adminCopy.heroEyebrow}</p>
+          <h2 className="app-display-sm mt-3">{role === Role.STUDENT ? adminCopy.studentHeroTitle : adminCopy.heroTitle}</h2>
           <p className="app-subtle-copy mt-4 max-w-2xl text-sm sm:text-base">{dashboardCopy}</p>
           <div className="mt-6 flex flex-wrap gap-3">
             {role === Role.STUDENT && (
@@ -863,25 +875,25 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               className="app-secondary-button inline-flex min-h-[50px] items-center justify-center gap-2 px-5 text-sm font-semibold"
             >
               <AppIcon icon="solar:history-bold" size={18} />
-              Xem lịch sử
+              {adminCopy.viewHistory}
             </button>
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
           <div className="app-panel-soft app-hover-box px-4 py-4">
-            <p className="app-overline">Người dùng</p>
-            <p className="mt-3 text-lg font-semibold text-slate-900 dark:text-[var(--landing-text)]">{currentUser?.fullName || 'Người dùng hệ thống'}</p>
+            <p className="app-overline">{adminCopy.userCardTitle}</p>
+            <p className="mt-3 text-lg font-semibold text-slate-900 dark:text-[var(--landing-text)]">{currentUser?.fullName || shared.systemUser}</p>
             <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{currentUser?.email || role}</p>
           </div>
           <div className="app-panel-soft app-hover-box px-4 py-4">
-            <p className="app-overline">Yêu cầu đang mở</p>
+            <p className="app-overline">{adminCopy.openRequestsTitle}</p>
             <p className="app-stat-number mt-3 text-slate-900 dark:text-[var(--landing-text)]">{loading ? '...' : activeJobs.length}</p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">Các yêu cầu vẫn đang đi trong luồng xử lý.</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{adminCopy.openRequestsNote}</p>
           </div>
           <div className="app-panel-soft app-hover-box px-4 py-4">
-            <p className="app-overline">Cần chú ý</p>
+            <p className="app-overline">{adminCopy.attentionTitle}</p>
             <p className="app-stat-number mt-3 text-slate-900 dark:text-[var(--landing-text)]">{loading ? '...' : needsRevisionJobs.length}</p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">Các yêu cầu đang chờ cập nhật file hoặc ghi chú.</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{adminCopy.attentionNote}</p>
           </div>
         </div>
       </section>
@@ -893,9 +905,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               <PenLine size={18} />
             </div>
             <div>
-              <p className="app-eyebrow">// Cần chỉnh sửa</p>
+              <p className="app-eyebrow">{adminCopy.needsRevisionEyebrow}</p>
               <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-[var(--landing-text)]">
-                {needsRevisionJobs.length} yêu cầu cần được cập nhật trước khi in.
+                {fillText(adminCopy.needsRevisionTitle, { count: needsRevisionJobs.length })}
               </h3>
               <p className="mt-2 text-sm text-slate-600 dark:text-[var(--landing-muted)]">
                 {needsRevisionJobs.map((job) => job.jobName).join(', ')}
@@ -926,7 +938,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
           <div className="app-panel overflow-hidden">
             <div className="flex items-center justify-between gap-4 border-b border-[rgba(30,23,19,0.08)] px-6 py-5 dark:border-white/8">
               <div>
-                <p className="app-overline">{role === Role.STUDENT ? '// Yêu cầu của tôi' : '// Yêu cầu đang xử lý'}</p>
+                <p className="app-overline">{role === Role.STUDENT ? adminCopy.myRequestsEyebrow : adminCopy.processingEyebrow}</p>
                 <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-[var(--landing-text)]">
                   {role === Role.STUDENT ? t('myJobs') : t('allJobs')}
                 </h3>
@@ -935,7 +947,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
                 onClick={() => onPageChange('history')}
                 className="text-sm font-semibold text-[var(--landing-accent)] transition-colors hover:text-[var(--landing-accent-strong)]"
               >
-                Xem lưu trữ
+                {adminCopy.viewArchive}
               </button>
             </div>
             {loading ? (
@@ -958,7 +970,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
 
         <aside className="space-y-5">
           <section className="app-hover-box overflow-hidden border border-[rgba(20,33,43,0.08)] bg-[linear-gradient(145deg,#172733_0%,#10202b_58%,#ef7d57_170%)] px-6 py-6 text-white shadow-[0_18px_40px_rgba(14,25,34,0.14)]">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/55">// Thao tác</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/55">{adminCopy.actionsEyebrow}</p>
             <h3 className="app-display-font mt-3 text-[2rem] leading-none">{primaryAction.title}</h3>
             <p className="mt-4 text-sm leading-7 text-white/74">
               {primaryAction.description}
@@ -973,7 +985,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
           </section>
 
           <section className="app-panel px-5 py-5">
-            <p className="app-overline">// Lối tắt</p>
+            <p className="app-overline">{adminCopy.shortcutsEyebrow}</p>
             <div className="mt-4 grid grid-cols-2 gap-3">
               {quickActions.map((action) => (
                 <button
@@ -990,7 +1002,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
 
           {activeJobs.length > 0 && (
             <section className="app-panel px-5 py-5">
-              <p className="app-overline">// Theo dõi trạng thái</p>
+              <p className="app-overline">{adminCopy.trackingEyebrow}</p>
               <div className="mt-4 space-y-3">
                 {activeJobs.slice(0, 3).map((job) => {
                   const stepIndex = Math.max(FLOW_STEPS.indexOf(job.status as JobStatus), 0);
@@ -1031,7 +1043,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
 
           {stats && (
             <section className="app-panel px-5 py-5">
-              <p className="app-overline">// Thống kê lab</p>
+              <p className="app-overline">{adminCopy.labStatsEyebrow}</p>
               <div className="mt-4 space-y-3 text-sm">
                 {[
                   { label: t('totalJobs'), value: stats.totalJobs, valueClass: 'text-slate-900 dark:text-[var(--landing-text)]' },
@@ -1050,12 +1062,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
 
           {dailyStats.length > 0 && (
             <section className="app-panel px-5 py-5">
-              <p className="app-overline">// Nhịp 7 ngày</p>
+              <p className="app-overline">{adminCopy.sevenDayEyebrow}</p>
               <div className="mt-4 flex h-32 items-end gap-2">
-                {dailyStats.map((day: any) => {
+                {dailyStats.map((day: DailyStat) => {
                   const total = day.approved + day.done + day.rejected + day.needsRevision;
-                  const doneHeight = total ? Math.max((day.done / maxDailyTotal) * 88, day.done ? 6 : 0) : 4;
-                  const approvedHeight = total ? Math.max((day.approved / maxDailyTotal) * 88, day.approved ? 6 : 0) : 0;
+                  const doneHeight = day.done ? Math.max((day.done / maxDailyTotal) * 88, 6) : 0;
+                  const approvedHeight = day.approved ? Math.max((day.approved / maxDailyTotal) * 88, 6) : 0;
                   const rejectedHeight = day.rejected ? Math.max((day.rejected / maxDailyTotal) * 88, 6) : 0;
                   const revisionHeight = day.needsRevision ? Math.max((day.needsRevision / maxDailyTotal) * 88, 6) : 0;
                   return (
@@ -1074,10 +1086,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               </div>
               <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-slate-500 dark:text-[var(--landing-muted)]">
                 {[
-                  { color: 'bg-emerald-500', label: 'Hoàn thành' },
-                  { color: 'bg-sky-500', label: 'Đã duyệt' },
-                  { color: 'bg-rose-400', label: 'Từ chối' },
-                  { color: 'bg-orange-400', label: 'Chỉnh sửa' },
+                  { color: 'bg-emerald-500', label: adminCopy.chartLegend.done },
+                  { color: 'bg-sky-500', label: adminCopy.chartLegend.approved },
+                  { color: 'bg-rose-400', label: adminCopy.chartLegend.rejected },
+                  { color: 'bg-orange-400', label: adminCopy.chartLegend.revision },
                 ].map((item) => (
                   <span key={item.label} className="inline-flex items-center gap-2">
                     <span className={cn('h-2.5 w-2.5', item.color)} />

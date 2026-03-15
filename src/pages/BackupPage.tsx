@@ -1,9 +1,10 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Download, HardDrive, Loader2, Plus, RefreshCw } from 'lucide-react';
 import { AppIcon } from '../components/AppIcon';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
+import type { BackupInfo } from '../types';
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -19,7 +20,7 @@ export const BackupPage: React.FC = () => {
   const { lang } = useLang();
   const copy = getUiText(lang).adminBackup;
   const locale = lang === 'JP' ? 'en-US' : 'vi-VN';
-  const [backups, setBackups] = useState<any[]>([]);
+  const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -45,8 +46,8 @@ export const BackupPage: React.FC = () => {
       const result = await api.createBackup();
       alert(fillText(copy.createdAlert, { file: result.file }));
       fetchBackups();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setCreating(false);
     }

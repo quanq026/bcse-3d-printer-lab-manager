@@ -5,13 +5,14 @@ import { useLang } from '../contexts/LanguageContext';
 import { getUiText } from '../lib/uiText';
 import { cn } from '../lib/utils';
 import { Role } from '../types';
+import type { User } from '../types';
 
 interface SidebarProps {
   role: Role;
   activePage: string;
   onPageChange: (page: string) => void;
   onLogout: () => void;
-  currentUser?: any;
+  currentUser?: User | null;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
 }

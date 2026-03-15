@@ -11,15 +11,18 @@ import { AppIcon } from '../components/AppIcon';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
 import { useLang } from '../contexts/LanguageContext';
+import { getUiText } from '../lib/uiText';
+import type { User } from '../types';
 
 interface LandingPageProps {
-  onLogin: (user: any) => void;
+  onLogin: (user: User) => void;
 }
 
 const VJU_REGEX = /@(st\.vju\.ac\.vn|vju\.ac\.vn)$/i;
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const { lang, setLang, t } = useLang();
+  const copy = getUiText(lang);
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +42,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
   const [supervisor, setSupervisor] = useState('');
 
   useEffect(() => {
-    api.getSettings().then(setSettings).catch(() => {});
+    api.getSettings().then(setSettings).catch(() => { });
   }, []);
 
   const heroFeatures = useMemo(
@@ -63,8 +66,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       const res = await api.login(loginEmail, loginPass);
       localStorage.setItem('lab_token', res.token);
       onLogin(res.user);
-    } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : copy.landing.genericError);
     } finally {
       setLoading(false);
     }
@@ -81,7 +84,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     }
 
     if (password !== confirmPass) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError(copy.landing.passwordMismatch);
       return;
     }
 
@@ -93,8 +96,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       setPassword('');
       setConfirmPass('');
       setSuccess(t('registerSuccess'));
-    } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : copy.landing.genericError);
     } finally {
       setLoading(false);
     }
@@ -123,8 +126,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           <div className="landing-section-marker">// ACCESS PORTAL</div>
           <p className="landing-kicker">SMART 3D PRINT REQUEST PLATFORM</p>
           <h2 className="landing-display">
-            {t('heroTitle')}
-            <span>{t('heroHighlight')}</span>
+            <span className="landing-display-line">{t('heroTitle')}</span>
+            <span className="landing-display-line landing-display-accent">{t('heroHighlight')}</span>
           </h2>
           <p className="landing-copy">{t('heroDesc')}</p>
         </div>
@@ -132,11 +135,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
         <div className="landing-feature-list landing-reveal landing-reveal-delay-3">
           {heroFeatures.map(({ icon, title, desc }, index) => (
             <article key={title} className="landing-feature-card app-hover-box">
-              <div className="landing-feature-index">{String(index + 1).padStart(2, '0')}</div>
-              <div className="landing-feature-icon">
-                <AppIcon icon={icon} size={18} />
+              <div className="landing-feature-visual">
+                <div className="landing-feature-index">{String(index + 1).padStart(2, '0')}</div>
+                <div className="landing-feature-icon">
+                  <AppIcon icon={icon} size={18} />
+                </div>
               </div>
-              <div>
+              <div className="landing-feature-body">
                 <h3>{title}</h3>
                 <p>{desc}</p>
               </div>
@@ -249,8 +254,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     type="button"
                     className="landing-password-toggle"
                     onClick={() => setShowPass((prev) => !prev)}
-                    aria-label={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    title={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    aria-label={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
+                    title={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
                   >
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -344,15 +349,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     type="button"
                     className="landing-password-toggle"
                     onClick={() => setShowPass((prev) => !prev)}
-                    aria-label={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    title={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                    aria-label={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
+                    title={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
                   >
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </Field>
 
-              <Field label="Xác nhận mật khẩu">
+              <Field label={copy.landing.confirmPassword}>
                 <input
                   type={showPass ? 'text' : 'password'}
                   placeholder="••••••••"
@@ -364,7 +369,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   className={cn('landing-input', confirmPass && confirmPass !== password && 'is-invalid')}
                 />
                 {confirmPass && confirmPass !== password && (
-                  <p className="landing-field-error">Mật khẩu không khớp</p>
+                  <p className="landing-field-error">{copy.landing.passwordNotMatch}</p>
                 )}
               </Field>
 

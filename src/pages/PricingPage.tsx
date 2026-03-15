@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { Tag, Layers, Wrench, Info, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
+import type { PricingRule, ServiceFee } from '../types';
 
 const MATERIAL_COLORS: Record<string, string> = {
   PLA: '#22c55e',
@@ -17,8 +18,8 @@ const MATERIAL_DESC: Record<string, string> = {
 };
 
 export const PricingPage: React.FC = () => {
-  const [pricing, setPricing] = useState<any[]>([]);
-  const [fees, setFees] = useState<any[]>([]);
+  const [pricing, setPricing] = useState<PricingRule[]>([]);
+  const [fees, setFees] = useState<ServiceFee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export const PricingPage: React.FC = () => {
           <h3 className="app-overline text-slate-700 dark:text-[var(--landing-muted)]">Giá vật liệu theo gram</h3>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {pricing.map((rule: any) => (
+          {pricing.map((rule: PricingRule) => (
             <article
               key={rule.material}
               className="app-panel app-hover-box grid gap-4 border p-5 sm:p-6"
@@ -125,12 +126,11 @@ export const PricingPage: React.FC = () => {
             <h3 className="app-overline text-slate-700 dark:text-[var(--landing-muted)]">Phí dịch vụ và hỗ trợ</h3>
           </div>
           <div className="app-panel app-hover-box overflow-hidden border">
-            {fees.map((fee: any, i: number) => (
+            {fees.map((fee: ServiceFee, i: number) => (
               <div
                 key={fee.name}
-                className={`grid gap-3 px-5 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6 ${
-                  i < fees.length - 1 ? 'border-b border-[rgba(30,23,19,0.08)] dark:border-white/8' : ''
-                }`}
+                className={`grid gap-3 px-5 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-6 ${i < fees.length - 1 ? 'border-b border-[rgba(30,23,19,0.08)] dark:border-white/8' : ''
+                  }`}
               >
                 <div>
                   <p className="text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">{fee.label}</p>
@@ -138,9 +138,8 @@ export const PricingPage: React.FC = () => {
                     <p className="mt-1 text-xs leading-6 text-slate-500 dark:text-[var(--landing-muted)]">{fee.description}</p>
                   )}
                 </div>
-                <span className={`text-sm font-black uppercase tracking-[0.16em] ${
-                  fee.amount === 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-[var(--landing-accent-strong)]'
-                }`}>
+                <span className={`text-sm font-black uppercase tracking-[0.16em] ${fee.amount === 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-[var(--landing-accent-strong)]'
+                  }`}>
                   {fee.amount === 0 ? 'Miễn phí' : `${Number(fee.amount).toLocaleString('vi-VN')}đ`}
                 </span>
               </div>

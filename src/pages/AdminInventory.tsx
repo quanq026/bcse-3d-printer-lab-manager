@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { AppIcon } from '../components/AppIcon';
 import { useLang } from '../contexts/LanguageContext';
+import { MaterialType, type FilamentInventory } from '../types';
 import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
 import { cn } from '../lib/utils';
@@ -22,22 +23,13 @@ const AREA_LABELS: Record<string, string> = {
   'My Dinh': 'Mỹ Đình',
   'Hoa Lac': 'Hòa Lạc',
 };
-const MATERIALS = ['PLA', 'PETG', 'TPU', 'ABS'];
-const COLOR_PRESETS = [
-  { value: 'White', label: 'Trắng' },
-  { value: 'Black', label: 'Đen' },
-  { value: 'Gray', label: 'Xám' },
-  { value: 'Blue', label: 'Xanh dương' },
-  { value: 'Green', label: 'Xanh lá' },
-  { value: 'Red', label: 'Đỏ' },
-  { value: 'Yellow', label: 'Vàng' },
-  { value: 'Orange', label: 'Cam' },
-  { value: 'Purple', label: 'Tím' },
-  { value: 'Pink', label: 'Hồng' },
-];
+type InventoryDraft = Omit<FilamentInventory, 'id' | 'status'>;
 
-const emptyNew = () => ({
-  material: 'PLA',
+const MATERIALS: MaterialType[] = [MaterialType.PLA, MaterialType.PETG, MaterialType.TPU, MaterialType.ABS];
+const COLOR_PRESET_VALUES = ['White', 'Black', 'Gray', 'Blue', 'Green', 'Red', 'Yellow', 'Orange', 'Purple', 'Pink'] as const;
+
+const emptyNew = (): InventoryDraft => ({
+  material: MaterialType.PLA,
   color: '',
   brand: '',
   remainingGrams: 1000,
@@ -46,27 +38,33 @@ const emptyNew = () => ({
   area: 'My Dinh',
 });
 
-const areaLabel = (area?: string) => AREA_LABELS[area || ''] || area || 'Khác';
-
 export const AdminInventory: React.FC = () => {
   const { lang } = useLang();
   const text = getUiText(lang);
   const copy = text.adminInventory;
   const shared = text.shared;
+  const colors = text.colors;
+
+  const COLOR_PRESETS = COLOR_PRESET_VALUES.map(value => ({
+    value,
+    label: colors[value.toLowerCase() as keyof typeof colors] || value,
+  }));
+
+  const areaLabel = (area?: string) => AREA_LABELS[area || ''] || area || colors.other;
   const statusLabels: Record<string, string> = {
     'In Stock': copy.inStock,
     Low: copy.lowStock,
     'Out of Stock': copy.outOfStock,
   };
 
-  const [inventory, setInventory] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<FilamentInventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editGrams, setEditGrams] = useState('');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
-  const [newItem, setNewItem] = useState(emptyNew());
+  const [newItem, setNewItem] = useState<InventoryDraft>(emptyNew());
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -108,8 +106,8 @@ export const AdminInventory: React.FC = () => {
       await api.updateInventory(id, { remainingGrams: Number.parseFloat(editGrams) });
       await fetchInventory();
       setEditId(null);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
     }
@@ -120,8 +118,8 @@ export const AdminInventory: React.FC = () => {
     try {
       await api.deleteInventory(id);
       setInventory((current) => current.filter((item) => item.id !== id));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     }
   };
 
@@ -133,8 +131,8 @@ export const AdminInventory: React.FC = () => {
       await fetchInventory();
       setShowAdd(false);
       setNewItem(emptyNew());
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
     }
@@ -154,7 +152,7 @@ export const AdminInventory: React.FC = () => {
         : 'border-red-200 bg-red-100 text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-200'
   );
 
-  const renderStockMeter = (item: any) => (
+  const renderStockMeter = (item: FilamentInventory) => (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between text-[11px] font-semibold text-slate-500 dark:text-[var(--landing-muted)]">
         <span>{fillText(copy.stockRemaining, { count: item.remainingGrams })}</span>
@@ -211,8 +209,8 @@ export const AdminInventory: React.FC = () => {
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="grid gap-2"><span className="app-overline">{copy.area}</span><select value={newItem.area} onChange={(event) => setNewItem({ ...newItem, area: event.target.value })} className="app-control rounded-[18px]">{AREAS.map((area) => <option key={area} value={area}>{areaLabel(area)}</option>)}</select></label>
-            <label className="grid gap-2"><span className="app-overline">{copy.material}</span><select value={newItem.material} onChange={(event) => setNewItem({ ...newItem, material: event.target.value })} className="app-control rounded-[18px]">{MATERIALS.map((material) => <option key={material}>{material}</option>)}</select></label>
+                <label className="grid gap-2"><span className="app-overline">{copy.area}</span><select value={newItem.area} onChange={(event) => setNewItem({ ...newItem, area: event.target.value })} className="app-control rounded-[18px]">{AREAS.map((area) => <option key={area} value={area}>{areaLabel(area)}</option>)}</select></label>
+                <label className="grid gap-2"><span className="app-overline">{copy.material}</span><select value={newItem.material} onChange={(event) => setNewItem({ ...newItem, material: event.target.value as MaterialType })} className="app-control rounded-[18px]">{MATERIALS.map((material) => <option key={material}>{material}</option>)}</select></label>
             <label className="grid gap-2"><span className="app-overline">{copy.brand}</span><input type="text" value={newItem.brand} onChange={(event) => setNewItem({ ...newItem, brand: event.target.value })} placeholder={copy.brandPlaceholder} className="app-control rounded-[18px]" /></label>
             <label className="grid gap-2"><span className="app-overline">{copy.location}</span><input type="text" value={newItem.location} onChange={(event) => setNewItem({ ...newItem, location: event.target.value })} placeholder={copy.locationPlaceholder} className="app-control rounded-[18px]" /></label>
             <label className="grid gap-2 xl:col-span-2">
@@ -382,4 +380,3 @@ export const AdminInventory: React.FC = () => {
     </div>
   );
 };
-

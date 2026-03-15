@@ -1,12 +1,14 @@
-﻿import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, Menu } from 'lucide-react';
+import React, { Suspense, lazy, useState } from 'react';
+import { ArrowLeft, ChevronDown, Loader2, Menu } from 'lucide-react';
 import { LanguageToggle } from './components/LanguageToggle';
 import { Sidebar } from './components/Sidebar';
 import { ThemeToggle } from './components/ThemeToggle';
+import { useAuth } from './contexts/AuthContext';
 import { useLang } from './contexts/LanguageContext';
 import { api } from './lib/api';
 import { fillText, getUiText } from './lib/uiText';
 import { LandingPage } from './pages/LandingPage';
+import type { PrintJob } from './types';
 import { Role } from './types';
 
 const StudentDashboard = lazy(() => import('./pages/StudentDashboard').then((module) => ({ default: module.StudentDashboard })));
@@ -38,46 +40,31 @@ function PageLoader() {
 export default function App() {
   const { lang } = useLang();
   const copy = getUiText(lang);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState<Role>(Role.STUDENT);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { isLoggedIn, currentUser, role, login, logout, loading } = useAuth();
   const [activePage, setActivePage] = useState('dashboard');
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<PrintJob | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [headerMetaOpen, setHeaderMetaOpen] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem('lab_token');
-    if (!token) return;
-
-    api.me().then((user) => {
-      setCurrentUser(user);
-      setRole(user.role as Role);
-      setIsLoggedIn(true);
-    }).catch(() => {
-      localStorage.removeItem('lab_token');
-    });
-  }, []);
-
-  const handleLogin = (user: any) => {
-    setCurrentUser(user);
-    setRole(user.role as Role);
-    setIsLoggedIn(true);
+  const handleLogin = (user: Parameters<typeof login>[0]) => {
+    login(user);
     setActivePage('dashboard');
     setMobileSidebarOpen(false);
+    setHeaderMetaOpen(false);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('lab_token');
-    setIsLoggedIn(false);
-    setCurrentUser(null);
+    logout();
     setSelectedJob(null);
     setActivePage('dashboard');
     setMobileSidebarOpen(false);
+    setHeaderMetaOpen(false);
   };
 
   const handlePageChange = (page: string) => {
     setActivePage(page);
     setMobileSidebarOpen(false);
+    setHeaderMetaOpen(false);
   };
 
   const navigateToJob = async (id: string) => {
@@ -92,6 +79,10 @@ export default function App() {
       setMobileSidebarOpen(false);
     }
   };
+
+  if (loading) {
+    return <PageLoader />;
+  }
 
   if (!isLoggedIn) {
     return <LandingPage onLogin={handleLogin} />;
@@ -112,6 +103,9 @@ export default function App() {
     [Role.MODERATOR]: copy.roles.moderatorSpace,
     [Role.ADMIN]: copy.roles.adminSpace,
   }[role];
+  const headerMetaToggleLabel = lang === 'EN'
+    ? (headerMetaOpen ? 'Hide quick panels' : 'Show quick panels')
+    : (headerMetaOpen ? 'Ẩn bảng nhanh' : 'Hiện bảng nhanh');
 
   const renderPage = () => {
     switch (activePage) {
@@ -175,55 +169,72 @@ export default function App() {
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="sticky top-0 z-20 px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8">
-            <div className="app-panel flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    onClick={() => setMobileSidebarOpen(true)}
-                    className="app-icon-button inline-flex h-11 w-11 items-center justify-center lg:hidden"
-                    aria-label={copy.shared.openNavigation}
-                  >
-                    <Menu size={18} />
-                  </button>
-                  {activePage !== 'dashboard' && (
+            <div className="app-panel flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex min-w-0 items-start justify-between gap-4">
+                <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
-                      onClick={() => handlePageChange('dashboard')}
-                      className="app-icon-button inline-flex h-11 w-11 items-center justify-center"
-                      title={copy.shared.backDashboard}
-                      aria-label={copy.shared.backDashboard}
+                      onClick={() => setMobileSidebarOpen(true)}
+                      className="app-icon-button inline-flex h-11 w-11 items-center justify-center lg:hidden"
+                      aria-label={copy.shared.openNavigation}
                     >
-                      <ArrowLeft size={18} />
+                      <Menu size={18} />
                     </button>
-                  )}
+                    {activePage !== 'dashboard' && (
+                      <button
+                        onClick={() => handlePageChange('dashboard')}
+                        className="app-icon-button inline-flex h-11 w-11 items-center justify-center"
+                        title={copy.shared.backDashboard}
+                        aria-label={copy.shared.backDashboard}
+                      >
+                        <ArrowLeft size={18} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="app-eyebrow">{currentMeta.eyebrow}</p>
+                    <h1 className="app-display-sm mt-2 break-words">{currentMeta.title}</h1>
+                    <p className="app-subtle-copy mt-2 max-w-3xl text-sm">{currentMeta.note}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="app-eyebrow">{currentMeta.eyebrow}</p>
-                  <h1 className="app-display-sm mt-2 truncate">{currentMeta.title}</h1>
-                  <p className="app-subtle-copy mt-2 max-w-3xl text-sm">{currentMeta.note}</p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setHeaderMetaOpen((value) => !value)}
+                  className={`app-icon-button app-header-meta-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center ${headerMetaOpen ? 'is-open' : ''}`}
+                  aria-label={headerMetaToggleLabel}
+                  title={headerMetaToggleLabel}
+                >
+                  <ChevronDown size={18} />
+                </button>
               </div>
-              <div className={`grid w-full gap-3 ${currentUser ? 'sm:grid-cols-2 xl:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,1fr))] xl:w-[980px]' : 'sm:grid-cols-3 xl:w-[720px]'}`}>
-                {currentUser && (
-                  <div className="app-panel-soft flex h-full min-w-0 items-center gap-3 px-4 py-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-[linear-gradient(135deg,var(--landing-accent),var(--landing-amber))] text-sm font-black uppercase text-white">
-                      {currentUser.fullName?.charAt(0) || 'U'}
+              <div className={`app-header-meta ${headerMetaOpen ? 'is-open' : ''}`}>
+                <div className={`app-header-meta-grid grid w-full gap-3 ${currentUser ? 'sm:grid-cols-2 xl:grid-cols-[minmax(0,1.35fr)_repeat(3,minmax(0,1fr))]' : 'sm:grid-cols-3'}`}>
+                  {currentUser && (
+                    <div className="app-panel-soft app-header-meta-card flex h-full min-w-0 items-center gap-3 px-4 py-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center bg-[linear-gradient(135deg,var(--landing-accent),var(--landing-amber))] text-sm font-black uppercase text-white">
+                        {currentUser.fullName?.charAt(0) || 'U'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="app-overline">{copy.shared.userLabel}</p>
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{currentUser.fullName}</p>
+                        <p className="text-xs text-slate-500 dark:text-[var(--landing-muted)]">{roleCopy}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="app-overline">{copy.shared.userLabel}</p>
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{currentUser.fullName}</p>
-                      <p className="text-xs text-slate-500 dark:text-[var(--landing-muted)]">{roleCopy}</p>
+                  )}
+                  <div className="app-panel-soft app-header-meta-card hidden h-full min-w-0 items-center gap-3 px-4 py-3 sm:flex">
+                    <span className="h-2.5 w-2.5 bg-[var(--landing-amber)]" />
+                    <div>
+                      <p className="app-overline">{copy.shared.statusLabel}</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{copy.shared.statusOnline}</p>
                     </div>
                   </div>
-                )}
-                <div className="app-panel-soft hidden h-full min-w-0 items-center gap-3 px-4 py-3 sm:flex">
-                  <span className="h-2.5 w-2.5 bg-[var(--landing-amber)]" />
-                  <div>
-                    <p className="app-overline">{copy.shared.statusLabel}</p>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{copy.shared.statusOnline}</p>
+                  <div className="app-header-meta-card">
+                    <LanguageToggle expanded />
+                  </div>
+                  <div className="app-header-meta-card">
+                    <ThemeToggle expanded />
                   </div>
                 </div>
-                <LanguageToggle expanded />
-                <ThemeToggle expanded />
               </div>
             </div>
           </header>

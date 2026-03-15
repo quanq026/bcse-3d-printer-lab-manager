@@ -6,7 +6,12 @@ import type { ZodSchema } from 'zod';
 
 export const RegisterSchema = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(1, 'Mật khẩu tối thiểu 1 ký tự').max(128),
+  password: z.string()
+    .min(8, 'Mật khẩu tối thiểu 8 ký tự')
+    .max(128)
+    .regex(/[a-z]/, 'Mật khẩu phải chứa ít nhất 1 chữ thường')
+    .regex(/[A-Z]/, 'Mật khẩu phải chứa ít nhất 1 chữ hoa')
+    .regex(/[0-9]/, 'Mật khẩu phải chứa ít nhất 1 chữ số'),
   fullName: z.string().min(2, 'Tên tối thiểu 2 ký tự').max(100).trim(),
   studentId: z.string().max(20).optional(),
   phone: z.string().max(20).optional(),

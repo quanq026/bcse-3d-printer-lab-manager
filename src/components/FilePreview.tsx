@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import JSZip from 'jszip';
 import { Box, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { useLang } from '../contexts/LanguageContext';
+import { getUiText } from '../lib/uiText';
 
 interface FilePreviewProps {
   file: File;
@@ -136,6 +138,8 @@ function STLViewer({ buffer }: { buffer: ArrayBuffer }) {
 }
 
 export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }) => {
+  const { lang } = useLang();
+  const copy = getUiText(lang);
   const [state, setState] = useState<'loading' | 'stl' | 'img' | 'error'>('loading');
   const [stlBuffer, setStlBuffer] = useState<ArrayBuffer | null>(null);
   const [imgSrc, setImgSrc] = useState<string | null>(null);
@@ -185,8 +189,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }
         } else {
           if (!cancelled) setState('error');
         }
-      } catch (e: any) {
-        if (!cancelled) { setErrorMsg(e.message || 'Preview không khả dụng'); setState('error'); }
+      } catch (e: unknown) {
+        if (!cancelled) { setErrorMsg(e instanceof Error ? e.message : copy.filePreview.unavailable); setState('error'); }
       }
     };
 
@@ -206,7 +210,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }
       <div className={containerClass}>
         <div className="flex flex-col items-center gap-2 text-slate-400">
           <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs">Đang tải preview...</span>
+          <span className="text-xs">{copy.filePreview.loading}</span>
         </div>
       </div>
     );
@@ -218,7 +222,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }
         <STLViewer buffer={stlBuffer} />
         <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/40 text-white text-[10px] font-bold px-2 py-1 rounded-full">
           <Box size={10} />
-          3D Preview
+          {copy.filePreview.threeDPreview}
         </div>
       </div>
     );
@@ -227,10 +231,10 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }
   if (state === 'img' && imgSrc) {
     return (
       <div className={containerClass}>
-        <img src={imgSrc} alt="3MF Thumbnail" className="w-full h-full object-contain p-2" />
+        <img src={imgSrc} alt={copy.filePreview.threeMfThumbnail} className="w-full h-full object-contain p-2" />
         <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/40 text-white text-[10px] font-bold px-2 py-1 rounded-full">
           <Box size={10} />
-          3MF Thumbnail
+          {copy.filePreview.threeMfThumbnail}
         </div>
       </div>
     );
@@ -241,7 +245,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }
     <div className={containerClass}>
       <div className="flex flex-col items-center gap-2 text-slate-400">
         <Box size={32} strokeWidth={1} />
-        <span className="text-xs text-center px-2">{errorMsg || 'Preview không khả dụng'}</span>
+        <span className="text-xs text-center px-2">{errorMsg || copy.filePreview.unavailable}</span>
       </div>
     </div>
   );

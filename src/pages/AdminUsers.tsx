@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Ban,
@@ -20,8 +20,9 @@ import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
 import { cn } from '../lib/utils';
+import { Role, type AdminUser } from '../types';
 
-const ROLE_OPTIONS = ['Student', 'Moderator', 'Admin'];
+const ROLE_OPTIONS: Role[] = [Role.STUDENT, Role.MODERATOR, Role.ADMIN];
 
 function formatDate(value?: string, locale = 'vi-VN', fallback = 'No date') {
   if (!value) return fallback;
@@ -34,7 +35,7 @@ function formatDate(value?: string, locale = 'vi-VN', fallback = 'No date') {
   }).format(parsed);
 }
 
-function formatDateTime(value?: string, locale = 'vi-VN', fallback = 'Permanent') {
+function formatDateTime(value?: string | null, locale = 'vi-VN', fallback = 'Permanent') {
   if (!value) return fallback;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
@@ -51,13 +52,13 @@ export const AdminUsers: React.FC = () => {
   const { lang } = useLang();
   const copy = getUiText(lang).adminUsers;
   const locale = lang === 'JP' ? 'en-US' : 'vi-VN';
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'warnings'>('users');
-  const [banModal, setBanModal] = useState<{ user: any; type: 'temporary' | 'permanent' } | null>(null);
+  const [banModal, setBanModal] = useState<{ user: AdminUser; type: 'temporary' | 'permanent' } | null>(null);
   const [banReason, setBanReason] = useState('');
   const [banDays, setBanDays] = useState('7');
 
@@ -77,13 +78,13 @@ export const AdminUsers: React.FC = () => {
     fetchUsers();
   }, []);
 
-  const doUpdate = async (id: string, data: any) => {
+  const doUpdate = async (id: string, data: Partial<AdminUser>) => {
     setActionLoading(id);
     try {
       await api.updateUser(id, data);
       await fetchUsers();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
@@ -95,8 +96,8 @@ export const AdminUsers: React.FC = () => {
     try {
       await api.deleteUser(id);
       await fetchUsers();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
@@ -107,7 +108,7 @@ export const AdminUsers: React.FC = () => {
     const { user, type } = banModal;
     const banUntil = type === 'temporary'
       ? new Date(Date.now() + Number.parseInt(banDays, 10) * 86400000).toISOString()
-      : null;
+      : undefined;
 
     setActionLoading(user.id);
     try {
@@ -119,8 +120,8 @@ export const AdminUsers: React.FC = () => {
       setBanModal(null);
       setBanReason('');
       await fetchUsers();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
@@ -131,8 +132,8 @@ export const AdminUsers: React.FC = () => {
     try {
       await api.updateUser(id, { status: 'active', banReason: '', banUntil: '' });
       await fetchUsers();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
@@ -201,7 +202,11 @@ export const AdminUsers: React.FC = () => {
     return map[role] || 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-white/6 dark:text-slate-200 dark:border-white/10';
   };
 
-  const renderActions = (user: any, compact = false) => {
+  const resolveUserStatus = (status?: string | null) => status || 'pending';
+
+  const renderActions = (user: AdminUser, compact = false) => {
+    const userStatus = resolveUserStatus(user.status);
+
     if (actionLoading === user.id) {
       return <Loader2 size={16} className="animate-spin text-slate-400" />;
     }
@@ -212,7 +217,7 @@ export const AdminUsers: React.FC = () => {
 
     return (
       <>
-        {user.status === 'pending' && (
+        {userStatus === 'pending' && (
           <button
             onClick={() => doUpdate(user.id, { status: 'active' })}
             className={cn(
@@ -225,7 +230,7 @@ export const AdminUsers: React.FC = () => {
             {compact ? copy.approve : <CheckCircle2 size={17} />}
           </button>
         )}
-        {user.status === 'active' && (
+        {userStatus === 'active' && (
           <button
             onClick={() => {
               setBanModal({ user, type: 'temporary' });
@@ -242,7 +247,7 @@ export const AdminUsers: React.FC = () => {
             {compact ? copy.suspend : <XCircle size={17} />}
           </button>
         )}
-        {user.status === 'suspended' && (
+        {userStatus === 'suspended' && (
           <button
             onClick={() => doUnban(user.id)}
             className={cn(
@@ -321,7 +326,7 @@ export const AdminUsers: React.FC = () => {
           <section className="app-panel-soft rounded-[28px] border border-red-200/70 px-5 py-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/8 dark:text-red-200 sm:px-6">
             <div className="flex items-start gap-3">
               <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-                <div className="space-y-1">
+              <div className="space-y-1">
                 <p className="text-xs font-black uppercase tracking-[0.24em]">{copy.riskEyebrow}</p>
                 <p>{fillText(copy.riskCount, { count: suspendedUsers.length })}</p>
               </div>
@@ -482,14 +487,14 @@ export const AdminUsers: React.FC = () => {
                               <p className="text-sm font-black text-slate-900 dark:text-[var(--landing-text)]">{user.fullName}</p>
                               <p className="mt-1 text-[11px] text-slate-500 dark:text-[var(--landing-muted)]">{user.studentId || copy.noStudentId}</p>
                             </div>
-                            <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]', statusBadge(user.status))}>
-                              {copy.statusLabels[user.status as keyof typeof copy.statusLabels] || user.status}
+                            <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em]', statusBadge(resolveUserStatus(user.status)))}>
+                              {copy.statusLabels[resolveUserStatus(user.status) as keyof typeof copy.statusLabels] || resolveUserStatus(user.status)}
                             </span>
                           </div>
                           <div className="mt-4 grid gap-2 text-xs text-slate-500 dark:text-[var(--landing-muted)]">
                             <div className="flex items-center gap-2"><Mail size={12} /> <span className="truncate">{user.email}</span></div>
                             {user.phone && <div className="flex items-center gap-2"><Phone size={12} /> <span>{user.phone}</span></div>}
-                          <div className="flex items-center gap-2"><Calendar size={12} /> <span>{formatDate(user.createdAt, locale, copy.noDate)}</span></div>
+                            <div className="flex items-center gap-2"><Calendar size={12} /> <span>{formatDate(user.createdAt, locale, copy.noDate)}</span></div>
                           </div>
                         </div>
                       </div>
@@ -498,7 +503,7 @@ export const AdminUsers: React.FC = () => {
                         <select
                           value={user.role}
                           disabled={actionLoading === user.id}
-                          onChange={(event) => doUpdate(user.id, { role: event.target.value })}
+                          onChange={(event) => doUpdate(user.id, { role: event.target.value as Role })}
                           className={cn('h-11 rounded-[16px] border px-3 text-xs font-bold outline-none', roleBadge(user.role))}
                         >
                           {ROLE_OPTIONS.map((role) => <option key={role} value={role}>{copy.roleLabels[role as keyof typeof copy.roleLabels] || role}</option>)}
@@ -541,20 +546,20 @@ export const AdminUsers: React.FC = () => {
                               {user.phone && <div className="flex items-center gap-2"><Phone size={12} /> <span>{user.phone}</span></div>}
                             </div>
                           </td>
-                                <td className="px-6 py-5 text-xs font-semibold text-slate-500 dark:text-[var(--landing-muted)]">{formatDate(user.createdAt, locale, copy.noDate)}</td>
+                          <td className="px-6 py-5 text-xs font-semibold text-slate-500 dark:text-[var(--landing-muted)]">{formatDate(user.createdAt, locale, copy.noDate)}</td>
                           <td className="px-6 py-5">
                             <select
                               value={user.role}
                               disabled={actionLoading === user.id}
-                              onChange={(event) => doUpdate(user.id, { role: event.target.value })}
+                              onChange={(event) => doUpdate(user.id, { role: event.target.value as Role })}
                               className={cn('h-11 rounded-[16px] border px-3 text-xs font-bold outline-none', roleBadge(user.role))}
                             >
                               {ROLE_OPTIONS.map((role) => <option key={role} value={role}>{copy.roleLabels[role as keyof typeof copy.roleLabels] || role}</option>)}
                             </select>
                           </td>
                           <td className="px-6 py-5">
-                            <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]', statusBadge(user.status))}>
-                              {copy.statusLabels[user.status as keyof typeof copy.statusLabels] || user.status}
+                            <span className={cn('inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em]', statusBadge(resolveUserStatus(user.status)))}>
+                              {copy.statusLabels[resolveUserStatus(user.status) as keyof typeof copy.statusLabels] || resolveUserStatus(user.status)}
                             </span>
                           </td>
                           <td className="px-6 py-5">

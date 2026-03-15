@@ -1,10 +1,17 @@
+import type { User, AdminUser, PrintJob, Printer, FilamentInventory, PricingRule, ServiceFee, Message, ActivityLog, DashboardStats, DailyStat, BackupInfo } from '../types';
+
 const BASE = '/api';
+type JobMutation = Omit<Partial<PrintJob>, 'printerId'> & {
+  preferredDate?: string;
+  preferredSlot?: string;
+  printerId?: string | null;
+};
 
 function getToken() {
   return localStorage.getItem('lab_token');
 }
 
-async function request<T>(method: string, path: string, body?: any): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -25,7 +32,7 @@ async function request<T>(method: string, path: string, body?: any): Promise<T> 
   const data = await res.json();
   if (!res.ok) {
     if (data.details && Array.isArray(data.details) && data.details.length > 0) {
-      throw new Error(data.details.map((d: any) => d.message).join(', '));
+      throw new Error(data.details.map((d: { message: string }) => d.message).join(', '));
     }
     throw new Error(data.error || 'Lỗi máy chủ');
   }
@@ -33,24 +40,24 @@ async function request<T>(method: string, path: string, body?: any): Promise<T> 
 }
 
 const get = <T>(path: string) => request<T>('GET', path);
-const post = <T>(path: string, body: any) => request<T>('POST', path, body);
-const patch = <T>(path: string, body: any) => request<T>('PATCH', path, body);
-const put = <T>(path: string, body: any) => request<T>('PUT', path, body);
+const post = <T>(path: string, body: unknown) => request<T>('POST', path, body);
+const patch = <T>(path: string, body: unknown) => request<T>('PATCH', path, body);
+const put = <T>(path: string, body: unknown) => request<T>('PUT', path, body);
 
 export const api = {
   // Auth
   login: (email: string, password: string) =>
-    post<{ token: string; user: any }>('/auth/login', { email, password }),
+    post<{ token: string; user: User }>('/auth/login', { email, password }),
   register: (data: { email: string; password: string; fullName: string; studentId?: string; phone?: string; supervisor?: string }) =>
     post<{ message: string }>('/auth/register', data),
-  me: () => get<any>('/auth/me'),
+  me: () => get<User>('/auth/me'),
 
   // Jobs
-  getJobs: () => get<any[]>('/jobs'),
-  getJob: (id: string) => get<any>(`/jobs/${id}`),
-  getQueue: () => get<any[]>('/jobs/queue'),
-  createJob: (data: any) => post<any>('/jobs', data),
-  updateJob: (id: string, data: any) => patch<any>(`/jobs/${id}`, data),
+  getJobs: () => get<PrintJob[]>('/jobs'),
+  getJob: (id: string) => get<PrintJob>(`/jobs/${id}`),
+  getQueue: () => get<PrintJob[]>('/jobs/queue'),
+  createJob: (data: JobMutation) => post<PrintJob>('/jobs', data),
+  updateJob: (id: string, data: JobMutation) => patch<PrintJob>(`/jobs/${id}`, data),
   uploadFile: async (file: File): Promise<{ fileName: string; originalName: string }> => {
     const token = getToken();
     const form = new FormData();
@@ -70,10 +77,10 @@ export const api = {
   },
 
   // Printers
-  getPrinters: () => get<any[]>('/printers'),
-  createPrinter: (data: any) => post<any>('/printers', data),
-  updatePrinter: (id: string, data: any) => patch<any>(`/printers/${id}`, data),
-  deletePrinter: (id: string) => request<any>('DELETE', `/printers/${id}`),
+  getPrinters: () => get<Printer[]>('/printers'),
+  createPrinter: (data: Partial<Printer>) => post<Printer>('/printers', data),
+  updatePrinter: (id: string, data: Partial<Printer>) => patch<Printer>(`/printers/${id}`, data),
+  deletePrinter: (id: string) => request<{ ok: boolean }>('DELETE', `/printers/${id}`),
   uploadPrinterImage: async (file: File): Promise<{ url: string }> => {
     const token = getToken();
     const form = new FormData();
@@ -93,44 +100,44 @@ export const api = {
   },
 
   // Inventory
-  getInventory: () => get<any[]>('/inventory'),
-  updateInventory: (id: string, data: any) => patch<any>(`/inventory/${id}`, data),
-  addInventory: (data: any) => post<any>('/inventory', data),
-  deleteInventory: (id: string) => request<any>('DELETE', `/inventory/${id}`),
+  getInventory: () => get<FilamentInventory[]>('/inventory'),
+  updateInventory: (id: string, data: Partial<FilamentInventory>) => patch<{ success: boolean }>(`/inventory/${id}`, data),
+  addInventory: (data: Partial<FilamentInventory>) => post<{ id: string }>('/inventory', data),
+  deleteInventory: (id: string) => request<{ ok: boolean }>('DELETE', `/inventory/${id}`),
 
   // Pricing
-  getPricing: () => get<any[]>('/pricing'),
-  updatePricing: (rules: any[]) => put<any>('/pricing', { rules }),
+  getPricing: () => get<PricingRule[]>('/pricing'),
+  updatePricing: (rules: Array<{ material: string; pricePerGram: number }>) => put<{ success: boolean }>('/pricing', { rules }),
 
   // Service Fees
-  getServiceFees: () => get<any[]>('/service-fees'),
-  updateServiceFees: (fees: Array<{ name: string; amount: number }>) => put<any>('/service-fees', { fees }),
+  getServiceFees: () => get<ServiceFee[]>('/service-fees'),
+  updateServiceFees: (fees: Array<{ name: string; amount: number; enabled?: boolean }>) => put<{ success: boolean }>('/service-fees', { fees }),
 
   // Messages
-  getMessages: (jobId?: string) => get<any[]>(`/messages${jobId ? `?jobId=${jobId}` : ''}`),
-  sendMessage: (content: string, jobId?: string) => post<any>('/messages', { content, jobId }),
+  getMessages: (jobId?: string) => get<Message[]>(`/messages${jobId ? `?jobId=${jobId}` : ''}`),
+  sendMessage: (content: string, jobId?: string) => post<Message>('/messages', { content, jobId }),
 
   // Users (Admin)
-  getUsers: () => get<any[]>('/users'),
-  updateUser: (id: string, data: any) => patch<any>(`/users/${id}`, data),
-  deleteUser: (id: string) => request<any>('DELETE', `/users/${id}`),
+  getUsers: () => get<AdminUser[]>('/users'),
+  updateUser: (id: string, data: Partial<AdminUser>) => patch<{ success: boolean }>(`/users/${id}`, data),
+  deleteUser: (id: string) => request<{ success: boolean }>('DELETE', `/users/${id}`),
 
   // Logs
-  getLogs: (limit?: number) => get<any[]>(`/logs${limit ? `?limit=${limit}` : ''}`),
+  getLogs: (limit?: number) => get<ActivityLog[]>(`/logs${limit ? `?limit=${limit}` : ''}`),
 
-  resubmitJob: (id: string) => patch<any>(`/jobs/${id}`, { status: 'Submitted' }),
+  resubmitJob: (id: string) => patch<PrintJob>(`/jobs/${id}`, { status: 'Submitted' }),
 
   // Stats
-  getStats: () => get<any>('/stats'),
-  getDailyStats: () => get<any[]>('/stats/daily'),
+  getStats: () => get<DashboardStats>('/stats'),
+  getDailyStats: () => get<DailyStat[]>('/stats/daily'),
 
   // Backup
-  createBackup: () => post<any>('/backup', {}),
-  listBackups: () => get<any[]>('/backups'),
+  createBackup: () => post<{ file: string }>('/backup', {}),
+  listBackups: () => get<BackupInfo[]>('/backups'),
   downloadBackup: (file: string) => `${BASE}/backups/${encodeURIComponent(file)}`,
 
   // Lab Settings
-  getSettings: () => get<any>('/settings'),
-  getSettingsAdmin: () => request<any>('GET', '/settings/admin'),
-  updateSettings: (data: Record<string, string>) => put<any>('/settings', data),
+  getSettings: () => get<Record<string, string>>('/settings'),
+  getSettingsAdmin: () => request<Record<string, string>>('GET', '/settings/admin'),
+  updateSettings: (data: Record<string, string>) => put<{ success: boolean }>('/settings', data),
 };

@@ -1,0 +1,165 @@
+import express from 'express';
+import path from 'path';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { logger, httpLogger } from './logger.js';
+import { db, UPLOADS_DIR, IS_PROD, createBackup } from './db.js';
+import { printerImageDir } from './middleware.js';
+
+// ─── Route modules ─────────────────────────────────────────────────────────
+import authRouter from './routes/auth.js';
+import jobsRouter from './routes/jobs.js';
+import printersRouter from './routes/printers.js';
+import inventoryRouter from './routes/inventory.js';
+import pricingRouter from './routes/pricing.js';
+import usersRouter from './routes/users.js';
+import messagesRouter from './routes/messages.js';
+import settingsRouter from './routes/settings.js';
+import statsRouter from './routes/stats.js';
+import backupRouter from './routes/backup.js';
+import serviceFeesRouter from './routes/serviceFees.js';
+import logsRouter from './routes/logs.js';
+
+const PORT = parseInt(process.env.PORT || '3000');
+
+// ─── Express ───────────────────────────────────────────────────────────────
+const app = express();
+
+// Trust proxy headers (needed when behind Nginx/reverse proxy)
+app.set('trust proxy', 1);
+
+// Security headers
+app.use(helmet({
+  // CSP disabled — React SPA with inline styles + Three.js needs careful tuning
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+// CORS — only allow configured origins
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  } else if (!IS_PROD && !origin) {
+    // Allow same-origin requests in dev (e.g. curl, Postman)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
+  next();
+});
+
+// Body size limits
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+
+// HTTP access log
+app.use(httpLogger);
+
+app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/printer-images', express.static(printerImageDir));
+
+// ─── Rate limiters ─────────────────────────────────────────────────────────
+
+// Global: 300 req / 15 min per IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Quá nhiều yêu cầu từ IP này, vui lòng thử lại sau 15 phút.' },
+});
+
+app.use('/api', globalLimiter);
+
+// ─── Health check ──────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  try {
+    const row = db.prepare('SELECT 1 as ok').get() as any;
+    res.json({
+      status: 'ok',
+      db: row?.ok === 1 ? 'ok' : 'degraded',
+      uptime: Math.floor(process.uptime()),
+      ts: new Date().toISOString(),
+    });
+  } catch {
+    res.status(503).json({ status: 'error', db: 'down' });
+  }
+});
+
+// ─── Mount routes ──────────────────────────────────────────────────────────
+app.use('/api/auth', authRouter);
+app.use('/api/jobs', jobsRouter);
+app.use('/api/printers', printersRouter);
+app.use('/api/inventory', inventoryRouter);
+app.use('/api/pricing', pricingRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/messages', messagesRouter);
+app.use('/api/settings', settingsRouter);
+app.use('/api/stats', statsRouter);
+app.use('/api/backup', backupRouter);
+app.use('/api/backups', backupRouter);
+app.use('/api/service-fees', serviceFeesRouter);
+app.use('/api/logs', logsRouter);
+
+// ─── Auto-backup: runs daily at ~2AM, checks every hour ───────────────────
+let lastAutoBackupDate = '';
+setInterval(() => {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  if (now.getHours() >= 2 && lastAutoBackupDate !== todayStr) {
+    lastAutoBackupDate = todayStr;
+    try {
+      createBackup();
+      logger.info('Auto-backup created', { file: `lab-${todayStr}.db` });
+    } catch (err) {
+      logger.error('Auto-backup failed', { err });
+    }
+  }
+}, 60 * 60 * 1000); // check every hour
+
+// ─── Static frontend (production) ──────────────────────────────────────────
+if (IS_PROD) {
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => { if (!req.path.startsWith('/api')) res.sendFile(path.join(distPath, 'index.html')); });
+}
+
+// ─── Start + Graceful shutdown ─────────────────────────────────────────────
+const server = app.listen(PORT, () => {
+  logger.info(`BCSE 3D Lab listening on :${PORT} [${IS_PROD ? 'production' : 'development'}]`);
+  logger.info(`Data dir: ${process.env.DATA_DIR || path.join(process.cwd(), 'data')}`);
+});
+
+function shutdown(signal: string) {
+  logger.info(`Received ${signal}, shutting down gracefully...`);
+  server.close(() => {
+    logger.info('HTTP server closed');
+    try { db.close(); logger.info('Database closed'); } catch { }
+    process.exit(0);
+  });
+  // Force exit after 10s if still not closed
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception', { err });
+  shutdown('uncaughtException');
+});
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection', { reason });
+});
+
+export default app;

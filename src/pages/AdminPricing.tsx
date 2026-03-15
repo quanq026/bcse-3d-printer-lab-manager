@@ -12,12 +12,13 @@ import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
 import { getUiText } from '../lib/uiText';
 import { cn } from '../lib/utils';
+import type { PricingRule, ServiceFee } from '../types';
 
 export const AdminPricing: React.FC = () => {
   const { lang } = useLang();
   const copy = getUiText(lang).adminPricing;
-  const [rules, setRules] = useState<any[]>([]);
-  const [fees, setFees] = useState<any[]>([]);
+  const [rules, setRules] = useState<PricingRule[]>([]);
+  const [fees, setFees] = useState<ServiceFee[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -57,8 +58,8 @@ export const AdminPricing: React.FC = () => {
       ]);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
     }
@@ -89,8 +90,8 @@ export const AdminPricing: React.FC = () => {
     },
   ];
 
-  const feeLabel = (fee: any) => copy.feeLabels[fee.name as keyof typeof copy.feeLabels] || fee.label || fee.name;
-  const feeDescription = (fee: any) => copy.feeDescriptions[fee.name as keyof typeof copy.feeDescriptions] || fee.description || '';
+  const feeLabel = (fee: ServiceFee) => copy.feeLabels[fee.name as keyof typeof copy.feeLabels] || fee.label || fee.name;
+  const feeDescription = (fee: ServiceFee) => copy.feeDescriptions[fee.name as keyof typeof copy.feeDescriptions] || fee.description || '';
 
   return (
     <div className="app-admin-squared app-admin-compact space-y-6">

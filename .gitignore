@@ -44,10 +44,11 @@ Desktop.ini
 
 # Others
 tmp/
+tmp-*
 temp/
 test.js
 metadata.json
 
 .playwright-cli/
 
-output/playwright
+output/

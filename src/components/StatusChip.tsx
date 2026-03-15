@@ -22,19 +22,6 @@ const STATUS_STYLES: Record<JobStatus, string> = {
   [JobStatus.NEEDS_REVISION]: 'border-orange-300/80 bg-orange-100/80 text-orange-800 dark:border-orange-300/20 dark:bg-orange-300/10 dark:text-orange-100',
 };
 
-export const STATUS_LABELS: Record<JobStatus, string> = {
-  [JobStatus.DRAFT]: 'Nháp',
-  [JobStatus.SUBMITTED]: 'Đã gửi',
-  [JobStatus.PENDING_REVIEW]: 'Chờ duyệt',
-  [JobStatus.APPROVED]: 'Đã duyệt',
-  [JobStatus.SCHEDULED]: 'Đã lên lịch',
-  [JobStatus.PRINTING]: 'Đang in',
-  [JobStatus.DONE]: 'Hoàn thành',
-  [JobStatus.REJECTED]: 'Từ chối',
-  [JobStatus.CANCELLED]: 'Đã hủy',
-  [JobStatus.NEEDS_REVISION]: 'Cần chỉnh sửa',
-};
-
 export const StatusChip: React.FC<StatusChipProps> = ({ status, className }) => {
   const { lang } = useLang();
   const labels = getUiText(lang).shared.jobStatuses;
@@ -48,7 +35,7 @@ export const StatusChip: React.FC<StatusChipProps> = ({ status, className }) => 
         className
       )}
     >
-      {labels[status] || STATUS_LABELS[status]}
+      {labels[status]}
     </span>
   );
 };

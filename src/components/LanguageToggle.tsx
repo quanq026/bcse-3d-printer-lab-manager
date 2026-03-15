@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Languages } from 'lucide-react';
 import { useLang } from '../contexts/LanguageContext';
 import { getUiText } from '../lib/uiText';
@@ -10,7 +10,7 @@ interface LanguageToggleProps {
 export const LanguageToggle: React.FC<LanguageToggleProps> = ({ expanded = false }) => {
   const { lang, setLang } = useLang();
   const copy = getUiText(lang);
-  const nextLang = lang === 'VN' ? 'JP' : 'VN';
+  const nextLang = lang === 'VN' ? 'EN' : 'VN';
   const currentLabel = copy.shared.languageNames[lang];
 
   if (expanded) {

@@ -18,6 +18,8 @@ import { PrintJob, JobStatus, MaterialSource } from '../types';
 import { StatusChip } from '../components/StatusChip';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
+import { useLang } from '../contexts/LanguageContext';
+import { getUiText, fillText } from '../lib/uiText';
 
 interface JobDetailProps {
   job: PrintJob;
@@ -25,6 +27,8 @@ interface JobDetailProps {
 }
 
 export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
+  const { lang } = useLang();
+  const copy = getUiText(lang);
   const [activeTab, setActiveTab] = useState('overview');
   const [resubmitting, setResubmitting] = useState(false);
   const [resubmitDone, setResubmitDone] = useState(false);
@@ -34,8 +38,8 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
     try {
       await api.resubmitJob(job.id);
       setResubmitDone(true);
-    } catch (err: any) {
-      alert(err.message || 'Gửi lại thất bại');
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : copy.jobDetail.resubmitFailed);
     } finally {
       setResubmitting(false);
     }
@@ -54,11 +58,11 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
   ];
 
   const tabs = [
-    { id: 'overview', label: 'Tổng quan', icon: FileText },
-    { id: 'timeline', label: 'Tiến độ', icon: Clock },
-    { id: 'files', label: 'File in', icon: Package },
-    { id: 'payment', label: 'Thanh toán', icon: CreditCard },
-    { id: 'messages', label: 'Tin nhắn', icon: MessageSquare },
+    { id: 'overview', label: copy.jobDetail.tabOverview, icon: FileText },
+    { id: 'timeline', label: copy.jobDetail.tabTimeline, icon: Clock },
+    { id: 'files', label: copy.jobDetail.tabFiles, icon: Package },
+    { id: 'payment', label: copy.jobDetail.tabPayment, icon: CreditCard },
+    { id: 'messages', label: copy.jobDetail.tabMessages, icon: MessageSquare },
   ];
 
   return (
@@ -77,30 +81,30 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
               <StatusChip status={job.status} />
             </div>
             <p className="text-sm text-slate-500">
-              Mã yêu cầu: <span className="font-mono font-bold">{job.id}</span> • Tạo ngày {new Date(job.createdAt).toLocaleDateString('vi-VN')}
+              {copy.jobDetail.requestCodeLabel} <span className="font-mono font-bold">{job.id}</span> • {fillText(copy.shared.createdOn, { date: new Date(job.createdAt).toLocaleDateString('vi-VN') })}
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
           <button className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition-all hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
             <Download size={18} />
-            Hóa đơn
+            {copy.jobDetail.invoice}
           </button>
           {![JobStatus.DONE, JobStatus.CANCELLED, JobStatus.REJECTED].includes(job.status) && (
             <button
               onClick={async () => {
-                if (!confirm('Bạn có chắc chắn muốn hủy yêu cầu này?')) return;
+                if (!confirm(copy.jobDetail.cancelConfirm)) return;
                 try {
                   await api.updateJob(job.id, { status: JobStatus.CANCELLED });
-                  alert('Đã hủy yêu cầu thành công.');
+                  alert(copy.jobDetail.cancelSuccess);
                   onBack();
-                } catch (err: any) {
-                  alert(err.message || 'Hủy yêu cầu thất bại');
+                } catch (err: unknown) {
+                  alert(err instanceof Error ? err.message : copy.jobDetail.cancelFailed);
                 }
               }}
               className="rounded-xl bg-red-600 px-6 py-2 text-sm font-bold text-white transition-all hover:bg-red-700 shadow-lg shadow-red-200 dark:shadow-none"
             >
-              Hủy yêu cầu
+              {copy.jobDetail.cancelRequest}
             </button>
           )}
         </div>
@@ -113,15 +117,15 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
               <PenLine size={20} className="text-orange-600" />
             </div>
             <div className="flex-1">
-              <h4 className="mb-1 font-black text-orange-900">Moderator yêu cầu sửa đổi</h4>
+              <h4 className="mb-1 font-black text-orange-900">{copy.jobDetail.revisionTitle}</h4>
               {job.revisionNote ? (
                 <p className="mb-4 text-sm leading-relaxed text-orange-800">"{job.revisionNote}"</p>
               ) : (
-                <p className="mb-4 text-sm text-orange-700">Vui lòng liên hệ Moderator để biết thêm chi tiết.</p>
+                <p className="mb-4 text-sm text-orange-700">{copy.jobDetail.revisionFallback}</p>
               )}
               {resubmitDone ? (
                 <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-                  <CheckCircle2 size={18} /> Đã gửi lại thành công. Đang chờ duyệt lại.
+                  <CheckCircle2 size={18} /> {copy.jobDetail.resubmitSuccess}
                 </div>
               ) : (
                 <button
@@ -131,7 +135,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
                   style={{ background: 'linear-gradient(135deg, #ea580c, #c2410c)' }}
                 >
                   {resubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  Gửi lại yêu cầu
+                  {copy.jobDetail.resubmitButton}
                 </button>
               )}
             </div>
@@ -165,39 +169,39 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="app-hover-box rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:p-8">
-                <h3 className="mb-6 text-lg font-bold text-slate-900 dark:text-white">Thông tin chi tiết</h3>
+                <h3 className="mb-6 text-lg font-bold text-slate-900 dark:text-white">{copy.jobDetail.detailTitle}</h3>
                 <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:gap-x-12 lg:gap-y-8">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Loại vật liệu</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.materialTypeLabel}</p>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">{job.materialType} ({job.color})</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nguồn nhựa</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{job.materialSource === MaterialSource.LAB ? 'Mua từ Lab' : 'Tự mang'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.materialSourceLabel}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{copy.shared.materialSources[job.materialSource]}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Khối lượng ước tính</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.estimatedWeightLabel}</p>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">{job.estimatedGrams} gram</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Thời gian in ước tính</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.estimatedTimeLabel}</p>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">{job.estimatedTime}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Máy in gán</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{job.printerName || 'Chưa gán'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.assignedPrinterLabel}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{job.printerName || copy.jobDetail.notAssigned}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Khung giờ in</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{job.slotTime || 'Chưa xếp lịch'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.printSlotLabel}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{job.slotTime || copy.jobDetail.notScheduled}</p>
                   </div>
                 </div>
               </div>
 
               <div className="app-hover-box rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50 sm:p-6 lg:p-8">
-                <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Ghi chú in ấn</h3>
+                <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">{copy.jobDetail.printNotes}</h3>
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                  {job.description || 'Không có ghi chú.'}
+                  {job.description || copy.jobDetail.noNotes}
                 </p>
               </div>
             </div>
@@ -231,35 +235,35 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
             <div className="space-y-6">
               <div className="app-hover-box rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:p-8">
                 <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Chi tiết thanh toán</h3>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{copy.jobDetail.paymentTitle}</h3>
                   <span className={cn(
                     'w-fit rounded-full px-3 py-1 text-xs font-bold uppercase',
                     job.status === JobStatus.DONE ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
                   )}>
-                    {job.status === JobStatus.DONE ? 'Đã thanh toán' : 'Chờ thanh toán'}
+                    {job.status === JobStatus.DONE ? copy.jobDetail.paid : copy.jobDetail.unpaid}
                   </span>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex items-start justify-between gap-4 text-sm">
-                    <span className="text-slate-500">Tiền nhựa ({job.materialType})</span>
+                    <span className="text-slate-500">{fillText(copy.jobDetail.materialCost, { type: job.materialType })}</span>
                     <span className="font-bold text-slate-900 dark:text-white">{job.cost.toLocaleString()}đ</span>
                   </div>
                   <div className="flex items-start justify-between gap-4 text-sm">
-                    <span className="text-slate-500">Phí dịch vụ</span>
+                    <span className="text-slate-500">{copy.jobDetail.serviceFee}</span>
                     <span className="font-bold text-slate-900 dark:text-white">0đ</span>
                   </div>
                   <div className="flex flex-col gap-2 border-t border-slate-100 pt-6 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">Tổng cộng</span>
+                    <span className="text-lg font-bold text-slate-900 dark:text-white">{copy.jobDetail.total}</span>
                     <span className="text-2xl font-black text-blue-600">{job.cost.toLocaleString()}đ</span>
                   </div>
                 </div>
               </div>
 
               <div className="app-hover-box rounded-3xl border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/30 dark:bg-blue-900/20 sm:p-6">
-                <h4 className="mb-2 text-sm font-bold text-blue-900 dark:text-blue-400">Hướng dẫn thanh toán</h4>
+                <h4 className="mb-2 text-sm font-bold text-blue-900 dark:text-blue-400">{copy.jobDetail.paymentGuideTitle}</h4>
                 <p className="mb-4 text-xs leading-relaxed text-blue-800 dark:text-blue-500">
-                  Vui lòng thanh toán tại bàn trực của Lab hoặc chuyển khoản qua mã QR bên dưới với nội dung: <strong>{job.id} - {job.userName}</strong>
+                  {copy.jobDetail.paymentGuideDesc} <strong>{job.id} - {job.userName}</strong>
                 </p>
                 <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-xl border border-blue-100 bg-white">
                   <div className="flex h-24 w-24 items-center justify-center rounded bg-slate-100 text-[10px] font-bold uppercase text-slate-400">QR Code</div>
@@ -271,7 +275,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
 
         <div className="space-y-6">
           <div className="app-hover-box rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">File đính kèm</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.attachments}</h4>
             <div className="app-hover-box group flex cursor-pointer items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 transition-all hover:border-blue-300 dark:border-slate-800 dark:bg-slate-800/50">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm dark:bg-slate-900">
                 <FileText size={20} />
@@ -285,13 +289,13 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
           </div>
 
           <div className="app-hover-box rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">Moderator phụ trách</h4>
+            <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">{copy.jobDetail.moderatorLabel}</h4>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400">
                 {job.moderatorName ? job.moderatorName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() : '?'}
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-900 dark:text-white">{job.moderatorName || 'Chưa gán'}</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white">{job.moderatorName || copy.jobDetail.notAssigned}</p>
                 <p className="text-[10px] text-slate-500">Lab Moderator</p>
               </div>
             </div>
@@ -301,7 +305,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
             <div className="app-hover-box rounded-3xl border border-red-100 bg-red-50 p-4 dark:border-red-900/30 dark:bg-red-900/20 sm:p-6">
               <div className="mb-2 flex items-center gap-2 text-red-600">
                 <AlertCircle size={18} />
-                <h4 className="text-sm font-bold">Lý do từ chối</h4>
+                <h4 className="text-sm font-bold">{copy.jobDetail.rejectionReason}</h4>
               </div>
               <p className="text-xs italic leading-relaxed text-red-700 dark:text-red-500">
                 "{job.rejectionReason}"

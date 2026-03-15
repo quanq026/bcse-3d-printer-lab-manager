@@ -103,7 +103,7 @@ export default function App() {
     [Role.MODERATOR]: copy.roles.moderatorSpace,
     [Role.ADMIN]: copy.roles.adminSpace,
   }[role];
-  const headerMetaToggleLabel = lang === 'EN'
+  const headerMetaToggleLabel = lang === 'JP'
     ? (headerMetaOpen ? 'Hide quick panels' : 'Show quick panels')
     : (headerMetaOpen ? 'Ẩn bảng nhanh' : 'Hiện bảng nhanh');
 

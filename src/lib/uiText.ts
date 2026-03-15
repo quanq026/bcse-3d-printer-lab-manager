@@ -1025,7 +1025,7 @@ export const translations = {
     statusCancelled: 'Đã hủy',
     heroTitle: 'Gửi yêu cầu in 3D',
     heroHighlight: 'nhanh và rõ ràng',
-    heroDesc: 'Hệ thống quản lý yêu cầu in 3D dành cho sinh viên và nhân sự vận hành của VJU-BCSE Lab.',
+    heroDesc: 'Hệ thống quản lý yêu cầu in 3D dành cho sinh viên VJU.',
     featurePolicy: 'Quy trình rõ ràng',
     featurePolicyDesc: 'Mọi yêu cầu đều đi qua quy trình kiểm duyệt trước khi lên máy.',
     featureMaterial: 'Vật liệu linh hoạt',

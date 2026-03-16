@@ -272,7 +272,7 @@ export const AdminInventory: React.FC = () => {
         {loading ? (
           <div className="app-empty-state"><Loader2 size={28} className="animate-spin" /><p className="text-sm font-semibold">{copy.loading}</p></div>
         ) : (
-          <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-2 xl:items-start">
+          <div className="space-y-4 p-4 sm:p-5">
             {groupedByArea.map(({ area, items }) => {
               const areaLowStock = items.filter((item) => item.status === 'Low' || item.status === 'Out of Stock').length;
               return (

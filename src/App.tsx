@@ -49,21 +49,27 @@ export default function App() {
 
   const handleLogin = (user: Parameters<typeof login>[0]) => {
     login(user);
-    setActivePage('dashboard');
+    React.startTransition(() => {
+      setActivePage('dashboard');
+    });
     setMobileSidebarOpen(false);
     setHeaderMetaOpen(false);
   };
 
   const handleLogout = () => {
     logout();
-    setSelectedJob(null);
-    setActivePage('dashboard');
+    React.startTransition(() => {
+      setSelectedJob(null);
+      setActivePage('dashboard');
+    });
     setMobileSidebarOpen(false);
     setHeaderMetaOpen(false);
   };
 
   const handlePageChange = (page: string) => {
-    setActivePage(page);
+    React.startTransition(() => {
+      setActivePage(page);
+    });
     setMobileSidebarOpen(false);
     setHeaderMetaOpen(false);
   };
@@ -71,11 +77,15 @@ export default function App() {
   const navigateToJob = async (id: string) => {
     try {
       const job = await api.getJob(id);
-      setSelectedJob(job);
-      setActivePage('job-detail');
+      React.startTransition(() => {
+        setSelectedJob(job);
+        setActivePage('job-detail');
+      });
     } catch {
-      setSelectedJob(null);
-      setActivePage('job-detail');
+      React.startTransition(() => {
+        setSelectedJob(null);
+        setActivePage('job-detail');
+      });
     } finally {
       setMobileSidebarOpen(false);
     }

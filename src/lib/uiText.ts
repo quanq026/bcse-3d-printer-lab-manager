@@ -157,7 +157,7 @@ const vnText = {
       open: 'Mở',
     },
     studentHeroTitle: 'Giữ mọi yêu cầu in luôn đúng tiến độ.',
-    studentHeroDesc: 'Theo dõi file, phê duyệt và lịch in mà không bỏ sót tiến độ của bất kỳ yêu cầu nào.',
+    studentHeroDesc: 'Theo dõi file, phê duyệt và lịch in.',
     studentActionsTitle: 'Tạo yêu cầu in mới.',
     studentActionsDesc: 'Khởi tạo yêu cầu, đính kèm file và đưa công việc vào luồng duyệt với thông tin rõ ràng ngay từ đầu.',
     myRequestsEyebrow: '// Yêu cầu của tôi',

@@ -109,34 +109,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       <div className="landing-noise" aria-hidden="true" />
       <div className="landing-grid" aria-hidden="true" />
 
-      {/* Background blobs */}
+      {/* Background blobs — pure CSS for performance */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <motion.div
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 50, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          className="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-[var(--landing-accent)] opacity-[0.08] blur-[80px]"
-        />
-        <motion.div
-          animate={{
-            x: [0, -80, 0],
-            y: [0, 120, 0],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          className="absolute -bottom-40 right-20 h-[500px] w-[500px] rounded-full bg-[var(--landing-sky)] opacity-[0.06] blur-[100px]"
-        />
+        <div className="landing-blob landing-blob--a" />
+        <div className="landing-blob landing-blob--b" />
       </div>
 
       <section className="landing-hero">

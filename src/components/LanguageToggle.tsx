@@ -10,8 +10,8 @@ interface LanguageToggleProps {
 export const LanguageToggle: React.FC<LanguageToggleProps> = ({ expanded = false }) => {
   const { lang, setLang } = useLang();
   const copy = getUiText(lang);
-  const nextLang = lang === 'VN' ? 'JP' : 'VN';
-  const currentLabel = copy.shared.languageNames[lang] || (lang === 'JP' ? 'English' : 'Tiếng Việt');
+  const nextLang = lang === 'VN' ? 'EN' : lang === 'EN' ? 'JP' : 'VN';
+  const currentLabel = copy.shared.languageNames[lang];
 
   if (expanded) {
     return (

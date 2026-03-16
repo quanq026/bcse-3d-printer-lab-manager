@@ -172,12 +172,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
         <div className="landing-auth-panel landing-reveal landing-reveal-delay-1">
           <div className="landing-auth-topbar">
             <button
-              onClick={() => setLang(lang === 'VN' ? 'JP' : 'VN')}
+              onClick={() => setLang(lang === 'VN' ? 'EN' : lang === 'EN' ? 'JP' : 'VN')}
               className="landing-lang-toggle"
               aria-label="Toggle language"
             >
               <AppIcon icon="solar:global-bold" size={14} />
-              <span>{lang === 'VN' ? 'VN' : 'JP'}</span>
+              <span>{lang}</span>
             </button>
           </div>
 

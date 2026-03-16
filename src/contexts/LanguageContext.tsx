@@ -16,7 +16,6 @@ const LanguageContext = createContext<LanguageContextType>({
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [lang, setLangState] = useState<Lang>(() => {
     const stored = localStorage.getItem('lab_lang');
-    if (stored === 'EN') return 'JP';
     return (stored as Lang) || 'VN';
   });
 

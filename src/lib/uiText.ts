@@ -1718,7 +1718,7 @@ export const translations = {
     statusRejected: 'Từ chối',
     statusCancelled: 'Đã hủy',
     heroTitle: 'Gửi yêu cầu in 3D',
-    heroHighlight: 'nhanh và rõ ràng',
+    heroHighlight: 'nhanh và linh hoạt',
     heroDesc: 'Hệ thống quản lý yêu cầu in 3D dành cho sinh viên VJU.',
     featurePolicy: 'Quy trình rõ ràng',
     featurePolicyDesc: 'Mọi yêu cầu đều đi qua quy trình kiểm duyệt trước khi lên máy.',

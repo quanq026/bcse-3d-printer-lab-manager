@@ -154,10 +154,10 @@ body {
 }
 
 .landing-hero {
-  padding: 48px clamp(28px, 5vw, 80px) 34px;
+  padding: clamp(24px, 4vh, 48px) clamp(28px, 5vw, 80px) clamp(16px, 3vh, 34px);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: clamp(16px, 3vh, 24px);
   justify-content: space-between;
   min-width: 0;
 }
@@ -173,11 +173,11 @@ body {
 
 .landing-auth-panel {
   width: 100%;
-  margin: 26px;
-  padding: 40px 38px;
+  margin: clamp(12px, 3vh, 26px);
+  padding: clamp(24px, 4vh, 40px) clamp(24px, 4vw, 38px);
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: clamp(16px, 3vh, 28px);
   border: 1px solid var(--glass-border);
   background: var(--glass-bg);
   backdrop-filter: blur(40px);
@@ -202,6 +202,28 @@ article {
 
 .app-hover-box:active {
   transform: scale(0.98);
+}
+
+/* Global Interactive Cursors */
+button:not(:disabled),
+a,
+select:not(:disabled),
+summary,
+[role="button"]:not([aria-disabled="true"]),
+.app-hover-box,
+input[type="checkbox"],
+input[type="radio"],
+.cursor-pointer,
+tr[onClick] {
+  cursor: pointer !important;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.6;
 }
 
 .app-primary-button {
@@ -302,7 +324,7 @@ article {
   margin-top: 12px;
   display: grid;
   gap: 6px;
-  font-size: clamp(2.85rem, 4.9vw, 4.75rem);
+  font-size: clamp(2.4rem, min(4.5vw, 8vh), 4.75rem);
   line-height: 0.9;
   letter-spacing: -0.03em;
   font-weight: 800;
@@ -343,8 +365,8 @@ article {
   grid-template-columns: 86px minmax(0, 1fr);
   gap: 18px;
   align-items: center;
-  min-height: 98px;
-  padding: 18px 24px;
+  min-height: clamp(72px, 10vh, 98px);
+  padding: clamp(12px, 2vh, 18px) 24px;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
@@ -457,11 +479,11 @@ article {
 
 .landing-auth-header {
   display: grid;
-  gap: 14px;
+  gap: clamp(8px, 1.5vh, 14px);
 }
 
 .landing-auth-title {
-  font-size: clamp(2.75rem, 4.8vw, 3.4rem);
+  font-size: clamp(2.4rem, min(4vw, 6vh), 3.4rem);
   line-height: 0.98;
   font-weight: 800;
   color: #ffffff !important;
@@ -470,22 +492,22 @@ article {
 
 .landing-auth-subtitle {
   color: rgba(255, 255, 255, 0.7) !important;
-  font-size: 1.08rem;
-  line-height: 1.86;
+  font-size: clamp(0.9rem, 1.5vh, 1.08rem);
+  line-height: 1.6;
 }
 
 .landing-auth-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  padding: 12px;
+  padding: clamp(6px, 1.5vh, 12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
 }
 
 .landing-auth-tab {
   position: relative;
-  min-height: 58px;
+  min-height: clamp(48px, 6vh, 58px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -539,7 +561,7 @@ article {
 
 .landing-auth-form {
   display: grid;
-  gap: 18px;
+  gap: clamp(12px, 2.5vh, 18px);
 }
 
 .landing-form-grid {
@@ -550,7 +572,7 @@ article {
 
 .landing-field {
   display: grid;
-  gap: 7px;
+  gap: clamp(4px, 1vh, 7px);
 }
 
 .landing-field-label {
@@ -574,7 +596,7 @@ article {
 
 .landing-input {
   width: 100%;
-  min-height: 60px;
+  min-height: clamp(50px, 7vh, 60px);
   padding: 0 18px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.1);

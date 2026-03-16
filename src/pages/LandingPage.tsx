@@ -223,23 +223,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
-          className="landing-footer-meta"
+          className="landing-footer-meta flex items-center justify-between w-full"
         >
           <span>{t('copyright')}</span>
-          {guideUrl ? (
-            <a href={guideUrl} target="_blank" rel="noopener noreferrer">
-              {t('userGuide')}
-            </a>
-          ) : (
-            <span className="is-muted">{t('userGuide')}</span>
-          )}
-          {settings.contact_email || settings.contact_facebook || settings.contact_zalo ? (
-            <a href={contactHref} target="_blank" rel="noopener noreferrer">
-              {t('contactSupport')}
-            </a>
-          ) : (
-            <span className="is-muted">{t('contactSupport')}</span>
-          )}
+          <div className="flex items-center gap-3 text-[var(--landing-amber)]">
+            <span className="text-[var(--landing-muted)] mr-2">{t('contactSupport')}:</span>
+            {settings.contact_facebook && (
+              <a href={settings.contact_facebook} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors duration-200" title="Facebook">
+                <AppIcon icon="solar:chat-square-like-bold-duotone" size={22} />
+              </a>
+            )}
+            {settings.contact_zalo && (
+              <a href={`https://zalo.me/${settings.contact_zalo.replace(/[^\d+]/g, '')}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors duration-200" title="Zalo">
+                <AppIcon icon="solar:chat-round-dots-bold-duotone" size={22} />
+              </a>
+            )}
+            {settings.contact_email && (
+              <a href={`mailto:${settings.contact_email}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors duration-200" title="Email">
+                <AppIcon icon="solar:letter-bold-duotone" size={22} />
+              </a>
+            )}
+            {settings.guide_url && (
+              <a href={settings.guide_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors duration-200" title="Guide">
+                <AppIcon icon="solar:notebook-bookmark-bold-duotone" size={22} />
+              </a>
+            )}
+          </div>
         </motion.div>
       </section>
 

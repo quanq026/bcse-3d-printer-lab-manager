@@ -8,6 +8,8 @@
   --landing-panel: #10202b;
   --landing-surface: #f6efe4;
   --landing-surface-soft: #fbf6ee;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-track: transparent;
   --landing-line: rgba(246, 239, 228, 0.16);
   --landing-line-strong: rgba(246, 239, 228, 0.28);
   --landing-ink: #1e1713;
@@ -18,9 +20,48 @@
   --landing-accent-strong: #d65f3a;
   --landing-amber: #f0b35b;
   --landing-sky: #8fd1e8;
-  --landing-shadow: 0 20px 70px rgba(9, 16, 23, 0.24);
+  --landing-shadow: 0 40px 100px rgba(9, 16, 23, 0.32);
   --landing-display: "Anybody", "Segoe UI", sans-serif;
   --landing-body: "Be Vietnam Pro", "Segoe UI", sans-serif;
+  --glass-bg: rgba(16, 32, 43, 0.75);
+  --glass-border: rgba(246, 239, 228, 0.1);
+  --glass-shine: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+}
+
+.dark {
+  color-scheme: dark;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-track: #0d161d;
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--landing-accent);
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 html, body, #root {
@@ -46,11 +87,39 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.18fr) minmax(420px, 600px);
   background:
-    radial-gradient(circle at top left, rgba(239, 125, 87, 0.16), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(143, 209, 232, 0.12), transparent 28%),
+    radial-gradient(circle at top left, rgba(239, 125, 87, 0.2), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(143, 209, 232, 0.15), transparent 40%),
     var(--landing-bg);
   color: var(--landing-text);
   overflow: hidden;
+}
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes landing-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.landing-shimmer-box {
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-shimmer-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  animation: landing-shimmer 2.5s infinite;
 }
 
 .landing-noise,
@@ -98,7 +167,8 @@ body {
   align-items: stretch;
   border-left: 1px solid var(--landing-line);
   background:
-    linear-gradient(180deg, rgba(16, 32, 43, 0.88), rgba(16, 32, 43, 0.96));
+    radial-gradient(circle at center, rgba(143, 209, 232, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(16, 32, 43, 0.92), rgba(16, 32, 43, 1));
 }
 
 .landing-auth-panel {
@@ -108,10 +178,58 @@ body {
   display: flex;
   flex-direction: column;
   gap: 28px;
-  border: 1px solid rgba(246, 239, 228, 0.12);
-  background: linear-gradient(180deg, rgba(249, 242, 231, 0.98), rgba(244, 234, 219, 0.98));
-  color: var(--landing-ink);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  color: var(--landing-text);
   box-shadow: var(--landing-shadow);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+
+.landing-auth-panel:hover {
+  box-shadow: 0 40px 80px -20px rgba(10, 15, 20, 0.4), 0 0 0 1px var(--glass-border);
+}
+
+/* Global Interactive Transitions */
+button,
+.app-nav-link,
+.app-panel-soft,
+tr,
+article {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-hover-box:active {
+  transform: scale(0.98);
+}
+
+.app-primary-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-primary-button::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  transition: 0.5s;
+  pointer-events: none;
+}
+
+.app-primary-button:hover::after {
+  left: 100%;
+  top: 100%;
 }
 
 .landing-masthead {

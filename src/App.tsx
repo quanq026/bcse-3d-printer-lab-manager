@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, ChevronDown, Loader2, Menu } from 'lucide-react';
 import { LanguageToggle } from './components/LanguageToggle';
 import { Sidebar } from './components/Sidebar';
@@ -241,7 +242,18 @@ export default function App() {
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
             <Suspense fallback={<PageLoader />}>
-              {renderPage()}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activePage + (selectedJob?.id || '')}
+                  initial={{ opacity: 0, y: 12, scale: 0.995 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.995 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  className="h-full"
+                >
+                  {renderPage()}
+                </motion.div>
+              </AnimatePresence>
             </Suspense>
           </div>
         </main>

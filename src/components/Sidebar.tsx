@@ -1,5 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import { LogOut, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AppIcon } from './AppIcon';
 import { useLang } from '../contexts/LanguageContext';
 import { getUiText } from '../lib/uiText';
@@ -66,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activePage, onPageChange
         )}
       />
       <aside className={cn(
-        'app-sidebar fixed inset-y-0 left-0 z-40 flex w-72 max-w-[86vw] flex-col border-r transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[288px] lg:max-w-none',
+        'app-sidebar fixed inset-y-0 left-0 z-40 flex w-72 max-w-[86vw] flex-col border-r transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[288px] lg:max-w-none',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-5 lg:hidden">
@@ -108,10 +109,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activePage, onPageChange
                 <button
                   key={item.id}
                   onClick={() => handlePageChange(item.id)}
-                  className={cn('app-nav-link', isActive && 'is-active')}
+                  className={cn('app-nav-link relative overflow-hidden', isActive && 'is-active')}
                 >
-                  <AppIcon icon={item.icon} size={18} className={cn(isActive ? 'text-[var(--landing-amber)]' : 'text-white/42')} />
-                  <span className="text-sm font-semibold">{label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-active"
+                      className="absolute inset-0 bg-white/10"
+                      transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <div className="relative z-10 flex items-center gap-3">
+                    <AppIcon icon={item.icon} size={18} className={cn(isActive ? 'text-[var(--landing-amber)]' : 'text-white/42')} />
+                    <span className="text-sm font-semibold">{label}</span>
+                  </div>
                 </button>
               );
             })}

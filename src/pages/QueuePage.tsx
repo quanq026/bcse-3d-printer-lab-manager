@@ -7,6 +7,7 @@ import {
   RefreshCw,
   User,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { StatusChip } from '../components/StatusChip';
 import { api } from '../lib/api';
 import { cn } from '../lib/utils';
@@ -106,14 +107,21 @@ export const QueuePage: React.FC<QueuePageProps> = ({ currentUser }) => {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {summaryCards.map((card, index) => (
-            <article key={card.label} className="app-panel-soft app-hover-box px-4 py-4">
+            <motion.article
+              key={card.label}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: 1.02 }}
+              className="app-panel-soft app-hover-box px-4 py-4"
+            >
               <div className="flex items-start justify-between gap-3">
                 <p className="app-overline">{card.label}</p>
                 <span className="app-overline">0{index + 1}</span>
               </div>
               <p className="app-stat-number mt-4 text-slate-900 dark:text-[var(--landing-text)]">{card.value}</p>
               <p className="mt-2 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{card.note}</p>
-            </article>
+            </motion.article>
           ))}
         </div>
       </section>

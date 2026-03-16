@@ -12,6 +12,7 @@ import {
   User,
   XCircle,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { StatusChip } from '../components/StatusChip';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
@@ -383,14 +384,21 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
             { ...copy.cards.printing, value: printingCount },
             { ...copy.cards.revision, value: revisionCount },
           ].map((card, index) => (
-            <article key={card.label} className="app-panel-soft app-hover-box px-4 py-4">
+            <motion.article
+              key={card.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className="app-panel-soft app-hover-box px-4 py-4"
+            >
               <div className="flex items-start justify-between gap-3">
                 <p className="app-overline">{card.label}</p>
                 <span className="app-overline">0{index + 1}</span>
               </div>
               <p className="app-stat-number mt-4 text-slate-900 dark:text-[var(--landing-text)]">{card.value}</p>
               <p className="mt-2 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{card.note}</p>
-            </article>
+            </motion.article>
           ))}
         </div>
       </section>
@@ -445,37 +453,48 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
               </div>
             ) : (
               <div className="space-y-3 px-4 py-4">
-                {filteredJobs.map((job) => (
-                  <button
+                {filteredJobs.map((job, index) => (
+                  <motion.button
                     key={job.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
                     onClick={() => setSelectedId(job.id)}
                     className={cn(
-                      'app-panel-soft app-hover-box block w-full px-4 py-4 text-left',
+                      'app-panel-soft app-hover-box block w-full px-4 py-4 text-left relative',
                       selectedId === job.id && 'border-[rgba(239,125,87,0.24)] bg-[rgba(239,125,87,0.1)] dark:bg-[rgba(239,125,87,0.12)]'
                     )}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="app-overline">#{job.id}</p>
-                        <p className="mt-2 truncate text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{job.jobName}</p>
+                    {selectedId === job.id && (
+                      <motion.div
+                        layoutId="active-moderator-job"
+                        className="absolute inset-0 z-0 bg-[rgba(239,125,87,0.08)]"
+                      />
+                    )}
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="app-overline">#{job.id}</p>
+                          <p className="mt-2 truncate text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{job.jobName}</p>
+                        </div>
+                        <StatusChip status={job.status as JobStatus} className="text-[9px]" />
                       </div>
-                      <StatusChip status={job.status as JobStatus} className="text-[9px]" />
-                    </div>
 
-                    <div className="mt-4 grid gap-2 text-xs text-slate-500 dark:text-[var(--landing-muted)]">
-                      <p className="inline-flex items-center gap-2">
-                        <User size={12} />
-                        {job.userName}
-                      </p>
-                      <p className="inline-flex items-center gap-2">
-                        <Clock size={12} />
-                        {job.estimatedTime || shared.noDuration}
-                      </p>
-                      <p className="truncate text-[11px] uppercase tracking-[0.16em] text-slate-400 dark:text-white/38">
-                        {job.materialType} • {job.color} • {materialSourceLabel(job.materialSource)}
-                      </p>
+                      <div className="mt-4 grid gap-2 text-xs text-slate-500 dark:text-[var(--landing-muted)]">
+                        <p className="inline-flex items-center gap-2">
+                          <User size={12} />
+                          {job.userName}
+                        </p>
+                        <p className="inline-flex items-center gap-2">
+                          <Clock size={12} />
+                          {job.estimatedTime || shared.noDuration}
+                        </p>
+                        <p className="truncate text-[11px] uppercase tracking-[0.16em] text-slate-400 dark:text-white/38">
+                          {job.materialType} • {job.color} • {materialSourceLabel(job.materialSource)}
+                        </p>
+                      </div>
                     </div>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             )}
@@ -516,60 +535,75 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
               </div>
 
               <div className="max-h-[calc(100vh-300px)] overflow-y-auto px-5 py-5">
-                <div className="space-y-5">
-                  <section className="app-panel-soft px-4 py-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                      <div className="min-w-0">
-                        <p className="app-overline">{copy.statusQuickTitle}</p>
-                        <p className="mt-2 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{fillText(copy.currentStatus, { status: statusLabel(selectedJob.status as JobStatus) })}</p>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={selectedId}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-5"
+                  >
+                    <section className="app-panel-soft px-4 py-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                        <div className="min-w-0">
+                          <p className="app-overline">{copy.statusQuickTitle}</p>
+                          <p className="mt-2 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{fillText(copy.currentStatus, { status: statusLabel(selectedJob.status as JobStatus) })}</p>
+                        </div>
+                        <select
+                          className="app-control lg:ml-auto lg:max-w-[280px]"
+                          value=""
+                          onChange={(event) => {
+                            const newStatus = event.target.value as JobStatus;
+                            if (!newStatus) return;
+                            handleStatusOverride(newStatus);
+                            event.target.value = '';
+                          }}
+                        >
+                          <option value="">{copy.changeTo}</option>
+                          {MODERATOR_STATUS_OPTIONS.filter((status) => status !== selectedJob.status).map((status) => (
+                            <option key={status} value={status}>
+                              {statusLabel(status)}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                      <select
-                        className="app-control lg:ml-auto lg:max-w-[280px]"
-                        value=""
-                        onChange={(event) => {
-                          const newStatus = event.target.value as JobStatus;
-                          if (!newStatus) return;
-                          handleStatusOverride(newStatus);
-                          event.target.value = '';
-                        }}
-                      >
-                        <option value="">{copy.changeTo}</option>
-                        {MODERATOR_STATUS_OPTIONS.filter((status) => status !== selectedJob.status).map((status) => (
-                          <option key={status} value={status}>
-                            {statusLabel(status)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </section>
+                    </section>
 
-                  <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    {[
-                      { label: copy.summary.material, value: `${selectedJob.materialType} / ${selectedJob.color}` },
-                      { label: copy.summary.estimatedGrams, value: `${selectedJob.estimatedGrams || 0}g` },
-                      { label: copy.summary.materialSource, value: materialSourceLabel(selectedJob.materialSource) },
-                      { label: copy.summary.estimatedTime, value: selectedJob.estimatedTime || shared.noDuration },
-                    ].map((item) => (
-                      <article key={item.label} className="app-panel-soft app-hover-box px-4 py-4">
-                        <p className="app-overline">{item.label}</p>
-                        <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{item.value}</p>
-                      </article>
-                    ))}
-                  </section>
+                    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      {[
+                        { label: copy.summary.material, value: `${selectedJob.materialType} / ${selectedJob.color}` },
+                        { label: copy.summary.estimatedGrams, value: `${selectedJob.estimatedGrams || 0}g` },
+                        { label: copy.summary.materialSource, value: materialSourceLabel(selectedJob.materialSource) },
+                        { label: copy.summary.estimatedTime, value: selectedJob.estimatedTime || shared.noDuration },
+                      ].map((item, idx) => (
+                        <motion.article
+                          key={item.label}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className="app-panel-soft app-hover-box px-4 py-4"
+                        >
+                          <p className="app-overline">{item.label}</p>
+                          <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{item.value}</p>
+                        </motion.article>
+                      ))}
+                    </section>
 
-                  {renderQuoteCard()}
-                  {renderActionBoard()}
+                    {renderQuoteCard()}
+                    {renderActionBoard()}
 
-                  <section className="app-panel px-5 py-5">
-                    <p className="app-overline">{copy.moderatorNoteEyebrow}</p>
-                    <textarea
-                      value={moderatorNote}
-                      onChange={(event) => setModeratorNote(event.target.value)}
-                      placeholder={copy.moderatorNotePlaceholder}
-                      className="app-control mt-4 min-h-[160px] resize-none py-4"
-                    />
-                  </section>
-                </div>
+                    <section className="app-panel px-5 py-5">
+                      <p className="app-overline">{copy.moderatorNoteEyebrow}</p>
+                      <textarea
+                        value={moderatorNote}
+                        onChange={(event) => setModeratorNote(event.target.value)}
+                        placeholder={copy.moderatorNotePlaceholder}
+                        className="app-control mt-4 min-h-[160px] resize-none py-4"
+                      />
+                    </section>
+                  </motion.div>
+                </AnimatePresence>
               </div>
             </>
           )}

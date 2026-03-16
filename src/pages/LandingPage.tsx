@@ -7,6 +7,7 @@ import {
   EyeOff,
   Loader2,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AppIcon } from '../components/AppIcon';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
@@ -108,8 +109,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
       <div className="landing-noise" aria-hidden="true" />
       <div className="landing-grid" aria-hidden="true" />
 
+      {/* Background blobs */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <motion.div
+          animate={{
+            x: [0, 100, 0],
+            y: [0, 50, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+          className="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-[var(--landing-accent)] opacity-[0.08] blur-[80px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, -80, 0],
+            y: [0, 120, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+          className="absolute -bottom-40 right-20 h-[500px] w-[500px] rounded-full bg-[var(--landing-sky)] opacity-[0.06] blur-[100px]"
+        />
+      </div>
+
       <section className="landing-hero">
-        <div className="landing-masthead landing-reveal">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="landing-masthead"
+        >
           <div className="landing-brand-mark">
             <AppIcon icon="solar:printer-2-bold" size={26} />
           </div>
@@ -120,21 +155,56 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
               <span>VJU My Dinh . VJU Hoa Lac</span>
             </p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="landing-editorial landing-reveal landing-reveal-delay-1">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="landing-editorial"
+        >
           <div className="landing-section-marker">// ACCESS PORTAL</div>
           <p className="landing-kicker">SMART 3D PRINT REQUEST PLATFORM</p>
           <h2 className="landing-display">
-            <span className="landing-display-line">{t('heroTitle')}</span>
-            <span className="landing-display-line landing-display-accent">{t('heroHighlight')}</span>
+            <motion.span
+              style={{ display: 'block' }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="landing-display-line"
+            >
+              {t('heroTitle')}
+            </motion.span>
+            <motion.span
+              style={{ display: 'block' }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="landing-display-line landing-display-accent"
+            >
+              {t('heroHighlight')}
+            </motion.span>
           </h2>
-          <p className="landing-copy">{t('heroDesc')}</p>
-        </div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="landing-copy"
+          >
+            {t('heroDesc')}
+          </motion.p>
+        </motion.div>
 
-        <div className="landing-feature-list landing-reveal landing-reveal-delay-3">
+        <div className="landing-feature-list">
           {heroFeatures.map(({ icon, title, desc }, index) => (
-            <article key={title} className="landing-feature-card app-hover-box">
+            <motion.article
+              key={title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 + index * 0.1 }}
+              whileHover={{ scale: 1.02, y: -4 }}
+              className="landing-feature-card app-hover-box"
+            >
               <div className="landing-feature-visual">
                 <div className="landing-feature-index">{String(index + 1).padStart(2, '0')}</div>
                 <div className="landing-feature-icon">
@@ -145,11 +215,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 <h3>{title}</h3>
                 <p>{desc}</p>
               </div>
-            </article>
+            </motion.article>
           ))}
         </div>
 
-        <div className="landing-footer-meta landing-reveal landing-reveal-delay-3">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="landing-footer-meta"
+        >
           <span>{t('copyright')}</span>
           {guideUrl ? (
             <a href={guideUrl} target="_blank" rel="noopener noreferrer">
@@ -165,29 +240,60 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           ) : (
             <span className="is-muted">{t('contactSupport')}</span>
           )}
-        </div>
+        </motion.div>
       </section>
 
       <section className="landing-auth-wrap">
-        <div className="landing-auth-panel landing-reveal landing-reveal-delay-1">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="landing-auth-panel"
+        >
           <div className="landing-auth-topbar">
-            <button
-              onClick={() => setLang(lang === 'VN' ? 'EN' : lang === 'EN' ? 'JP' : 'VN')}
-              className="landing-lang-toggle"
-              aria-label="Toggle language"
-            >
-              <AppIcon icon="solar:global-bold" size={14} />
-              <span>{lang}</span>
-            </button>
+            <div className="relative flex p-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl">
+              {(['VN', 'EN', 'JP'] as const).map((l) => {
+                const isActive = lang === l;
+                return (
+                  <button
+                    key={l}
+                    onClick={() => setLang(l)}
+                    className={cn(
+                      'relative z-10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition-colors duration-300',
+                      isActive ? 'text-[var(--landing-bg)]' : 'text-white/40 hover:text-white/70'
+                    )}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="lang-active"
+                        className="absolute inset-0 bg-[var(--landing-amber)] rounded-lg"
+                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
+                    <span className="relative z-20">{l}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="landing-auth-header">
-            <h2 id="auth-title" className="landing-auth-title">
-              {tab === 'login' ? t('welcome') : t('registerTitle')}
-            </h2>
-            <p className="landing-auth-subtitle">
-              {tab === 'login' ? t('loginSubtitle') : t('registerSubtitle')}
-            </p>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h2 id="auth-title" className="landing-auth-title">
+                  {tab === 'login' ? t('welcome') : t('registerTitle')}
+                </h2>
+                <p className="landing-auth-subtitle">
+                  {tab === 'login' ? t('loginSubtitle') : t('registerSubtitle')}
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <div className="landing-auth-tabs" role="tablist" aria-labelledby="auth-title">
@@ -205,182 +311,213 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 className={cn('landing-auth-tab', tab === tabItem && 'is-active')}
               >
                 <span>{tabItem === 'login' ? t('login') : t('register')}</span>
+                {tab === tabItem && (
+                  <motion.div
+                    layoutId="auth-tab-active"
+                    className="absolute inset-0 z-0 bg-white"
+                    transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                  />
+                )}
               </button>
             ))}
           </div>
 
-          {error && (
-            <div className="landing-auth-alert is-error" role="alert">
-              <AlertCircle size={16} />
-              <span>{error}</span>
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="landing-auth-alert is-error"
+                role="alert"
+              >
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </motion.div>
+            )}
 
-          {success && (
-            <div className="landing-auth-alert is-success" role="status">
-              <CheckCircle2 size={16} />
-              <span>{success}</span>
-            </div>
-          )}
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="landing-auth-alert is-success"
+                role="status"
+              >
+                <CheckCircle2 size={16} />
+                <span>{success}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {tab === 'login' ? (
-            <form onSubmit={handleLogin} className="landing-auth-form">
-              <Field label={t('email')}>
-                <input
-                  type="email"
-                  name="loginEmail"
-                  placeholder={t('emailPlaceholder')}
-                  autoComplete="username"
-                  required
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  className="landing-input"
-                />
-              </Field>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {tab === 'login' ? (
+                <form onSubmit={handleLogin} className="landing-auth-form">
+                  <Field label={t('email')}>
+                    <input
+                      type="email"
+                      name="loginEmail"
+                      placeholder={t('emailPlaceholder')}
+                      autoComplete="username"
+                      required
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      className="landing-input"
+                    />
+                  </Field>
 
-              <Field label={t('password')}>
-                <div className="landing-password-field">
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    name="loginPassword"
-                    autoComplete="current-password"
-                    required
-                    value={loginPass}
-                    onChange={(e) => setLoginPass(e.target.value)}
-                    className="landing-input landing-input-password"
+                  <Field label={t('password')}>
+                    <div className="landing-password-field">
+                      <input
+                        type={showPass ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        name="loginPassword"
+                        autoComplete="current-password"
+                        required
+                        value={loginPass}
+                        onChange={(e) => setLoginPass(e.target.value)}
+                        className="landing-input landing-input-password"
+                      />
+                      <button
+                        type="button"
+                        className="landing-password-toggle"
+                        onClick={() => setShowPass((prev) => !prev)}
+                        aria-label={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
+                        title={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
+                      >
+                        {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </Field>
+
+                  <SubmitBtn loading={loading} label={t('login')} />
+                </form>
+              ) : (
+                <form onSubmit={handleRegister} className="landing-auth-form">
+                  <div className="landing-form-grid">
+                    <Field label={t('fullName')}>
+                      <input
+                        type="text"
+                        name="fullName"
+                        placeholder="Nguyen Van A"
+                        autoComplete="name"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="landing-input"
+                      />
+                    </Field>
+
+                    <Field label={t('studentId')}>
+                      <input
+                        type="text"
+                        name="studentId"
+                        placeholder="2201xxxx"
+                        autoComplete="off"
+                        value={studentId}
+                        onChange={(e) => setStudentId(e.target.value)}
+                        className="landing-input"
+                      />
+                    </Field>
+                  </div>
+
+                  <Field label={t('phone')}>
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder="09xxxxxxxx"
+                      autoComplete="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="landing-input"
+                    />
+                  </Field>
+
+                  <Field label={t('supervisor')}>
+                    <input
+                      type="text"
+                      name="supervisor"
+                      placeholder="Dr. Nguyen Van B"
+                      autoComplete="organization-title"
+                      value={supervisor}
+                      onChange={(e) => setSupervisor(e.target.value)}
+                      className="landing-input"
+                    />
+                  </Field>
+
+                  <Field label={t('email')} hint={t('emailHint')}>
+                    <input
+                      type="email"
+                      name="registerEmail"
+                      placeholder={t('emailPlaceholder')}
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={cn('landing-input', email && !VJU_REGEX.test(email) && 'is-invalid')}
+                    />
+                    {email && !VJU_REGEX.test(email) && (
+                      <p className="landing-field-error">{t('invalidEmail')}</p>
+                    )}
+                  </Field>
+
+                  <Field label={t('password')}>
+                    <div className="landing-password-field">
+                      <input
+                        type={showPass ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        name="newPassword"
+                        autoComplete="new-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="landing-input landing-input-password"
+                      />
+                      <button
+                        type="button"
+                        className="landing-password-toggle"
+                        onClick={() => setShowPass((prev) => !prev)}
+                        aria-label={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
+                        title={showPass ? copy.landing.showPassword : copy.landing.showPassword}
+                      >
+                        {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </Field>
+
+                  <Field label={copy.landing.confirmPassword}>
+                    <input
+                      type={showPass ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      name="confirmPassword"
+                      autoComplete="new-password"
+                      required
+                      value={confirmPass}
+                      onChange={(e) => setConfirmPass(e.target.value)}
+                      className={cn('landing-input', confirmPass && confirmPass !== password && 'is-invalid')}
+                    />
+                    {confirmPass && confirmPass !== password && (
+                      <p className="landing-field-error">{copy.landing.passwordNotMatch}</p>
+                    )}
+                  </Field>
+
+                  <SubmitBtn
+                    loading={loading}
+                    label={t('register')}
+                    disabled={(!!email && !VJU_REGEX.test(email)) || (!!confirmPass && confirmPass !== password)}
                   />
-                  <button
-                    type="button"
-                    className="landing-password-toggle"
-                    onClick={() => setShowPass((prev) => !prev)}
-                    aria-label={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
-                    title={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
-                  >
-                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </Field>
-
-              <SubmitBtn loading={loading} label={t('login')} />
-            </form>
-          ) : (
-            <form onSubmit={handleRegister} className="landing-auth-form">
-              <div className="landing-form-grid">
-                <Field label={t('fullName')}>
-                  <input
-                    type="text"
-                    name="fullName"
-                    placeholder="Nguyen Van A"
-                    autoComplete="name"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="landing-input"
-                  />
-                </Field>
-
-                <Field label={t('studentId')}>
-                  <input
-                    type="text"
-                    name="studentId"
-                    placeholder="2201xxxx"
-                    autoComplete="off"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    className="landing-input"
-                  />
-                </Field>
-              </div>
-
-              <Field label={t('phone')}>
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder="09xxxxxxxx"
-                  autoComplete="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="landing-input"
-                />
-              </Field>
-
-              <Field label={t('supervisor')}>
-                <input
-                  type="text"
-                  name="supervisor"
-                  placeholder="Dr. Nguyen Van B"
-                  autoComplete="organization-title"
-                  value={supervisor}
-                  onChange={(e) => setSupervisor(e.target.value)}
-                  className="landing-input"
-                />
-              </Field>
-
-              <Field label={t('email')} hint={t('emailHint')}>
-                <input
-                  type="email"
-                  name="registerEmail"
-                  placeholder={t('emailPlaceholder')}
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={cn('landing-input', email && !VJU_REGEX.test(email) && 'is-invalid')}
-                />
-                {email && !VJU_REGEX.test(email) && (
-                  <p className="landing-field-error">{t('invalidEmail')}</p>
-                )}
-              </Field>
-
-              <Field label={t('password')}>
-                <div className="landing-password-field">
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    name="newPassword"
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="landing-input landing-input-password"
-                  />
-                  <button
-                    type="button"
-                    className="landing-password-toggle"
-                    onClick={() => setShowPass((prev) => !prev)}
-                    aria-label={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
-                    title={showPass ? copy.landing.hidePassword : copy.landing.showPassword}
-                  >
-                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </Field>
-
-              <Field label={copy.landing.confirmPassword}>
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  name="confirmPassword"
-                  autoComplete="new-password"
-                  required
-                  value={confirmPass}
-                  onChange={(e) => setConfirmPass(e.target.value)}
-                  className={cn('landing-input', confirmPass && confirmPass !== password && 'is-invalid')}
-                />
-                {confirmPass && confirmPass !== password && (
-                  <p className="landing-field-error">{copy.landing.passwordNotMatch}</p>
-                )}
-              </Field>
-
-              <SubmitBtn
-                loading={loading}
-                label={t('register')}
-                disabled={(!!email && !VJU_REGEX.test(email)) || (!!confirmPass && confirmPass !== password)}
-              />
-            </form>
-          )}
-        </div>
+                </form>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
       </section>
     </main>
   );
@@ -398,9 +535,15 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 function SubmitBtn({ loading, label, disabled = false }: { loading: boolean; label: string; disabled?: boolean }) {
   return (
-    <button type="submit" disabled={loading || disabled} className="landing-submit">
+    <motion.button
+      whileHover={{ scale: 1.01, x: 5 }}
+      whileTap={{ scale: 0.98 }}
+      type="submit"
+      disabled={loading || disabled}
+      className="landing-submit"
+    >
       {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
       <span>{label}</span>
-    </button>
+    </motion.button>
   );
 }

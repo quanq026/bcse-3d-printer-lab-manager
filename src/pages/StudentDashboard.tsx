@@ -9,6 +9,7 @@ import {
   Search,
   Timer,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { AppIcon } from '../components/AppIcon';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
@@ -421,7 +422,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {opsKpiCards.map((card, index) => (
-            <article key={card.label} className="app-panel app-hover-box px-5 py-5">
+            <motion.article
+              key={card.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+              className="app-panel app-hover-box px-5 py-5"
+            >
               <div className="flex items-start justify-between gap-4">
                 <div className={cn('flex h-12 w-12 items-center justify-center', card.accent)}>
                   <AppIcon icon={card.icon} size={20} />
@@ -431,7 +439,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
               <p className="app-stat-number mt-5 text-slate-900 dark:text-[var(--landing-text)]">{card.value}</p>
               <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{card.label}</p>
               <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{card.note}</p>
-            </article>
+            </motion.article>
           ))}
         </section>
 
@@ -680,6 +688,31 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
     },
   ];
 
+  const renderKpiCards = () => (
+    <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {kpiCards.map((card, index) => (
+        <motion.article
+          key={card.label}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          whileHover={{ y: -5, transition: { duration: 0.2 } }}
+          className="app-panel app-hover-box px-5 py-5"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className={cn('flex h-12 w-12 items-center justify-center', card.accent)}>
+              <AppIcon icon={card.icon} size={20} />
+            </div>
+            <span className="app-overline">0{index + 1}</span>
+          </div>
+          <p className="app-stat-number mt-5 text-slate-900 dark:text-[var(--landing-text)]">{card.value}</p>
+          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{card.label}</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{card.note}</p>
+        </motion.article>
+      ))}
+    </section>
+  );
+
   const renderJobCard = (job: PrintJob) => (
     <button
       key={job.id}
@@ -919,21 +952,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNewBooking
         </section>
       )}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {kpiCards.map((card, index) => (
-          <article key={card.label} className="app-panel app-hover-box px-5 py-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className={cn('flex h-12 w-12 items-center justify-center', card.accent)}>
-                <AppIcon icon={card.icon} size={20} />
-              </div>
-              <span className="app-overline">0{index + 1}</span>
-            </div>
-            <p className="app-stat-number mt-5 text-slate-900 dark:text-[var(--landing-text)]">{card.value}</p>
-            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{card.label}</p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{card.note}</p>
-          </article>
-        ))}
-      </section>
+      {renderKpiCards()}
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.3fr)_360px]">
         <div className="space-y-6">

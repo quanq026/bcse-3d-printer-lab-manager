@@ -66,7 +66,11 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto max-w-5xl space-y-6"
+    >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
           <button
@@ -147,12 +151,21 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'app-tab-button flex flex-1 items-center justify-center gap-2 sm:flex-none',
+              'app-tab-button relative flex flex-1 items-center justify-center gap-2 sm:flex-none',
               activeTab === tab.id && 'is-active'
             )}
           >
-            <tab.icon size={16} />
-            {tab.label}
+            {activeTab === tab.id && (
+              <motion.div
+                layoutId="job-detail-tab"
+                className="absolute inset-0 z-0 bg-white"
+                transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
+              />
+            )}
+            <div className="relative z-10 flex items-center gap-2">
+              <tab.icon size={16} />
+              <span>{tab.label}</span>
+            </div>
           </button>
         ))}
       </div>
@@ -339,6 +352,6 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

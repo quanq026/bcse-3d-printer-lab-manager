@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Check,
@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { AppIcon } from '../components/AppIcon';
 import { useLang } from '../contexts/LanguageContext';
 import { MaterialType, type FilamentInventory } from '../types';
@@ -159,7 +160,11 @@ export const AdminInventory: React.FC = () => {
         <span>{fillText(copy.stockThreshold, { count: item.threshold })}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/8">
-        <div className={cn('h-full rounded-full transition-all', item.remainingGrams < 200 ? 'bg-red-500' : item.remainingGrams < 500 ? 'bg-amber-500' : 'bg-emerald-500')} style={{ width: `${Math.min((item.remainingGrams / 1000) * 100, 100)}%` }} />
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min((item.remainingGrams / 1000) * 100, 100)}%` }}
+          className={cn('h-full rounded-full transition-colors', item.remainingGrams < 200 ? 'bg-red-500' : item.remainingGrams < 500 ? 'bg-amber-500' : 'bg-emerald-500')}
+        />
       </div>
     </div>
   );
@@ -181,8 +186,15 @@ export const AdminInventory: React.FC = () => {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {stats.map((stat) => (
-              <div key={stat.label} className="app-hover-box app-metric-card rounded-[26px]">
+            {stats.map((stat, idx) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.1 }}
+                whileHover={{ y: -5 }}
+                className="app-hover-box app-metric-card rounded-[26px]"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="app-metric-card-label">{stat.label}</p>
@@ -191,7 +203,7 @@ export const AdminInventory: React.FC = () => {
                   <div className={cn('flex h-12 w-12 items-center justify-center rounded-[18px]', stat.accent)}><AppIcon icon={stat.icon} size={24} /></div>
                 </div>
                 <p className="app-metric-card-note">{stat.note}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>

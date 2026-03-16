@@ -45,7 +45,7 @@ Copy-Item .env.example .env
 ```bash
 npm run dev:server
 ```
-
+ 
 Backend mặc định chạy ở `http://localhost:3000`.
 
 ### 4. Chạy frontend (terminal khác)

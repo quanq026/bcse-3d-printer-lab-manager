@@ -320,7 +320,7 @@ export const AdminInventory: React.FC = () => {
         <div className="app-toolbar-shell grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
           <label className="relative block max-w-xl">
             <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={copy.searchPlaceholder} className="app-control rounded-[18px] pl-11 pr-4" />
+            <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={copy.searchPlaceholder} className="app-control app-search-input rounded-[18px] pr-4" />
           </label>
           <div className="flex flex-wrap gap-2">
             <span className="app-inline-pill rounded-full">PLA {(totalPLA / 1000).toFixed(1)}kg</span>

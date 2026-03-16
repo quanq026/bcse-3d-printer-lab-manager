@@ -428,8 +428,7 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
                   placeholder={copy.searchPlaceholder}
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  className="app-control"
-                  style={{ paddingLeft: '2.75rem', paddingRight: '1rem' }}
+                  className="app-control app-search-input"
                 />
               </div>
             </div>

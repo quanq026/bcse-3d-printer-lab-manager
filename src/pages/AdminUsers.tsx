@@ -438,7 +438,7 @@ export const AdminUsers: React.FC = () => {
                     placeholder={copy.searchPlaceholder}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    className="app-control rounded-[18px] pl-11 pr-4"
+                    className="app-control app-search-input rounded-[18px] pr-4"
                   />
                 </label>
                 <select

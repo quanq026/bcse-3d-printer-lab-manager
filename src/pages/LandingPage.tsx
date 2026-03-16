@@ -310,11 +310,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 }}
                 className={cn('landing-auth-tab', tab === tabItem && 'is-active')}
               >
-                <span>{tabItem === 'login' ? t('login') : t('register')}</span>
+                <span className="relative z-10">{tabItem === 'login' ? t('login') : t('register')}</span>
                 {tab === tabItem && (
                   <motion.div
                     layoutId="auth-tab-active"
-                    className="absolute inset-0 z-0 bg-white"
+                    className="absolute inset-0 z-0 bg-white shadow-sm"
                     transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
                   />
                 )}

@@ -410,7 +410,7 @@ const vnText = {
 
 const enOverrides = {
   shared: {
-    loadingWorkspace: 'Loading workspace', userLabel: 'User', statusLabel: 'Status', statusOnline: 'Lab online', refresh: 'Refresh', languageLabel: 'Language', languageToggle: 'Switch language', languageNames: { VN: 'Vietnamese', JP: 'English' }, themeLabel: 'Theme', themeToggle: 'Switch theme', themeLight: 'Light mode', themeDark: 'Dark mode', openNavigation: 'Open navigation', closeNavigation: 'Close navigation', closeOverlay: 'Close navigation overlay', backDashboard: 'Back to overview', systemUser: 'System user', pageUnavailable: 'This page is still being polished.', pageLoadFailed: 'Unable to load this request.', jobDetailSelectedNote: 'Review request {id} together with the related operation notes.', noDate: 'No date', noDuration: 'No duration yet', notAssigned: 'Unassigned', waitingApproval: 'Pending review', createdOn: 'Created on {date}', openItem: 'Open {name}', choosePrinter: 'Choose a printer', jobStatuses: { Draft: 'Draft', Submitted: 'Submitted', 'Pending review': 'Pending review', Approved: 'Approved', Scheduled: 'Scheduled', Printing: 'Printing', Done: 'Done', Rejected: 'Rejected', Cancelled: 'Cancelled', 'Needs Revision': 'Needs revision' }, materialSources: { Personal: 'Personal supply', Lab: 'Lab stock' },
+    loadingWorkspace: 'Loading workspace', userLabel: 'User', statusLabel: 'Status', statusOnline: 'Lab online', refresh: 'Refresh', languageLabel: 'Language', languageToggle: 'Switch language', languageNames: { VN: 'Vietnamese', EN: 'English', JP: 'Japanese' }, themeLabel: 'Theme', themeToggle: 'Switch theme', themeLight: 'Light mode', themeDark: 'Dark mode', openNavigation: 'Open navigation', closeNavigation: 'Close navigation', closeOverlay: 'Close navigation overlay', backDashboard: 'Back to overview', systemUser: 'System user', pageUnavailable: 'This page is still being polished.', pageLoadFailed: 'Unable to load this request.', jobDetailSelectedNote: 'Review request {id} together with the related operation notes.', noDate: 'No date', noDuration: 'No duration yet', notAssigned: 'Unassigned', waitingApproval: 'Pending review', createdOn: 'Created on {date}', openItem: 'Open {name}', choosePrinter: 'Choose a printer', jobStatuses: { Draft: 'Draft', Submitted: 'Submitted', 'Pending review': 'Pending review', Approved: 'Approved', Scheduled: 'Scheduled', Printing: 'Printing', Done: 'Done', Rejected: 'Rejected', Cancelled: 'Cancelled', 'Needs Revision': 'Needs revision' }, materialSources: { Personal: 'Personal supply', Lab: 'Lab stock' },
     save: 'Save'
   },
   pageMeta: {
@@ -818,7 +818,7 @@ const enOverrides = {
   },
   bookingWizard: {
     heroEyebrow: '// Book print',
-    heroTitle: 'Submit a 3D print request',
+    heroTitle: '3D printing',
     heroDesc: 'Complete each step to select print mode, material, file and preferred schedule before adding the request to the queue.',
     currentStep: 'Current step',
     stepPrefix: 'Step',
@@ -1851,8 +1851,8 @@ export const translations = {
     statusDone: 'Completed',
     statusRejected: 'Rejected',
     statusCancelled: 'Cancelled',
-    heroTitle: 'Submit a 3D print request',
-    heroHighlight: 'quickly and clearly',
+    heroTitle: '3D printing',
+    heroHighlight: 'Fast & Clear',
     heroDesc: 'A 3D print request workspace for students and lab operators at VJU-BCSE.',
     featurePolicy: 'Clear workflow',
     featurePolicyDesc: 'Every request goes through review before it reaches a printer.',

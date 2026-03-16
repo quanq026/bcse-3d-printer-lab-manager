@@ -464,11 +464,12 @@ article {
   font-size: clamp(2.75rem, 4.8vw, 3.4rem);
   line-height: 0.98;
   font-weight: 800;
-  color: var(--landing-ink);
+  color: #ffffff !important;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .landing-auth-subtitle {
-  color: var(--landing-ink-soft);
+  color: rgba(255, 255, 255, 0.7) !important;
   font-size: 1.08rem;
   line-height: 1.86;
 }
@@ -478,17 +479,18 @@ article {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding: 12px;
-  border: 1px solid rgba(30, 23, 19, 0.12);
-  background: rgba(255, 255, 255, 0.44);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .landing-auth-tab {
+  position: relative;
   min-height: 58px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
-  color: var(--landing-ink-soft);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 0.92rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -497,14 +499,20 @@ article {
 }
 
 .landing-auth-tab:hover {
-  color: var(--landing-ink);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .landing-auth-tab.is-active {
-  border-color: rgba(30, 23, 19, 0.14);
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--landing-ink);
-  box-shadow: 0 10px 25px rgba(16, 32, 43, 0.08);
+  color: var(--landing-bg);
+}
+
+/* Framer Motion background rect for active tab */
+.landing-auth-tab-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #fff;
+  border-radius: 4px; /* Optional border radius for tab background */
 }
 
 .landing-auth-alert {
@@ -546,13 +554,15 @@ article {
 }
 
 .landing-field-label {
-  color: var(--landing-ink-soft);
-  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.7rem;
   font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .landing-field-hint {
-  color: rgba(79, 67, 58, 0.72);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 0.78rem;
   line-height: 1.6;
 }
@@ -566,21 +576,21 @@ article {
   width: 100%;
   min-height: 60px;
   padding: 0 18px;
-  border: 1px solid rgba(30, 23, 19, 0.12);
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--landing-ink);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff !important;
   font-size: 1.02rem;
   outline: none;
   transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .landing-input::placeholder {
-  color: rgba(79, 67, 58, 0.45);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .landing-input:focus {
   border-color: rgba(239, 125, 87, 0.75);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.1);
   box-shadow: 0 0 0 4px rgba(239, 125, 87, 0.12);
 }
 
@@ -606,13 +616,13 @@ article {
   align-items: center;
   justify-content: center;
   transform: translateY(-50%);
-  color: rgba(79, 67, 58, 0.72);
+  color: rgba(255, 255, 255, 0.4);
   transition: color 160ms ease, background-color 160ms ease;
 }
 
 .landing-password-toggle:hover {
-  color: var(--landing-ink);
-  background: rgba(20, 33, 43, 0.06);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .landing-submit {
@@ -628,7 +638,7 @@ article {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  box-shadow: 0 16px 32px rgba(214, 95, 58, 0.24);
+  box-shadow: 0 16px 32px rgba(214, 95, 58, 0.4);
   transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
 }
 

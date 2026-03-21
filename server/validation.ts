@@ -23,6 +23,13 @@ export const LoginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+const ManagedPasswordSchema = z.string()
+  .min(8, 'Mật khẩu tối thiểu 8 ký tự')
+  .max(128)
+  .regex(/[a-z]/, 'Mật khẩu phải chứa ít nhất 1 chữ thường')
+  .regex(/[A-Z]/, 'Mật khẩu phải chứa ít nhất 1 chữ hoa')
+  .regex(/[0-9]/, 'Mật khẩu phải chứa ít nhất 1 chữ số');
+
 // ─── Job schemas ────────────────────────────────────────────────────────────
 
 export const CreateJobSchema = z.object({
@@ -59,6 +66,15 @@ export const PatchUserSchema = z.object({
   role: z.enum(['Admin', 'Moderator', 'Student']).optional(),
   banReason: z.string().max(500).optional(),
   banUntil: z.string().max(50).optional(),
+}).strict();
+
+export const UpdateManagedPasswordSchema = z.object({
+  newPassword: ManagedPasswordSchema,
+}).strict();
+
+export const ChangeOwnPasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại').max(128),
+  newPassword: ManagedPasswordSchema,
 }).strict();
 
 export const UpdatePricingSchema = z.object({

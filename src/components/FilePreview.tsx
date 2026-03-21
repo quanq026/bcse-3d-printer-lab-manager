@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import JSZip from 'jszip';
-import { Box, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Box } from 'lucide-react';
 import { useLang } from '../contexts/LanguageContext';
 import { getUiText } from '../lib/uiText';
 

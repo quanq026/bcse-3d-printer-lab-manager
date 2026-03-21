@@ -12,7 +12,7 @@ import { logger, httpLogger } from './logger.js';
 import {
   validate,
   RegisterSchema, LoginSchema,
-  CreateJobSchema, PatchJobSchema, PatchUserSchema,
+  CreateJobSchema, PatchJobSchema, PatchUserSchema, UpdateManagedPasswordSchema, ChangeOwnPasswordSchema,
   UpdatePricingSchema, UpdateServiceFeesSchema, PostMessageSchema,
 } from './validation.js';
 
@@ -35,6 +35,12 @@ const PORT = parseInt(process.env.PORT || '3000');
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
 const IS_PROD = process.env.NODE_ENV === 'production';
+const TRUST_PROXY = process.env.TRUST_PROXY || (IS_PROD ? '1' : 'loopback');
+const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@vju.ac.vn';
+const SEED_MOD_EMAIL = process.env.SEED_MOD_EMAIL || 'mod@vju.ac.vn';
+const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@2024';
+const SEED_MOD_PASSWORD = process.env.SEED_MOD_PASSWORD || 'Mod@2024';
+const SYNC_SEED_PASSWORDS = ['1', 'true', 'yes'].includes((process.env.SYNC_SEED_PASSWORDS || '').toLowerCase());
 
 // Fail fast in production if JWT secret is default (insecure)
 if (IS_PROD && JWT_SECRET === 'bcse-vju-3dlab-secret-2025') {
@@ -182,12 +188,12 @@ try { db.exec(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_
 function seedIfEmpty() {
   const userCount = (db.prepare('SELECT COUNT(*) as c FROM users').get() as any).c;
   if (userCount === 0) {
-    const hash = bcrypt.hashSync('Admin@2024', 10);
+    const hash = bcrypt.hashSync(SEED_ADMIN_PASSWORD, 10);
     db.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status,created_at) VALUES (?,?,?,?,?,?,?)`)
-      .run(randomUUID(), 'admin@vju.ac.vn', hash, 'Admin BCSE Lab', 'Admin', 'active', new Date().toISOString());
-    const modHash = bcrypt.hashSync('Mod@2024', 10);
+      .run(randomUUID(), SEED_ADMIN_EMAIL, hash, 'Admin BCSE Lab', 'Admin', 'active', new Date().toISOString());
+    const modHash = bcrypt.hashSync(SEED_MOD_PASSWORD, 10);
     db.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status,created_at) VALUES (?,?,?,?,?,?,?)`)
-      .run(randomUUID(), 'mod@vju.ac.vn', modHash, 'Moderator Lab', 'Moderator', 'active', new Date().toISOString());
+      .run(randomUUID(), SEED_MOD_EMAIL, modHash, 'Moderator Lab', 'Moderator', 'active', new Date().toISOString());
   }
   const printerCount = (db.prepare('SELECT COUNT(*) as c FROM printers').get() as any).c;
   if (printerCount === 0) {
@@ -242,16 +248,39 @@ function seedIfEmpty() {
 }
 seedIfEmpty();
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
-function getSetting(key: string): string {
-  return ((db.prepare('SELECT value FROM lab_settings WHERE key=?').get(key) as any)?.value) || '';
+function syncManagedAccountPassword(email: string, role: string, password: string) {
+  const user = db.prepare('SELECT id,email,role FROM users WHERE email=?').get(email) as any;
+  if (!user) {
+    logger.warn('Managed account password sync skipped because the account was not found', { email, role });
+    return;
+  }
+  if (user.role !== role) {
+    logger.warn('Managed account password sync skipped because the role did not match', { email, expectedRole: role, actualRole: user.role });
+    return;
+  }
+
+  const passwordHash = bcrypt.hashSync(password, 10);
+  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(passwordHash, user.id);
+  logger.info('Managed account password synced from environment', { email, role });
 }
+
+function syncSeedPasswordsFromEnv() {
+  if (!SYNC_SEED_PASSWORDS) return;
+
+  syncManagedAccountPassword(SEED_ADMIN_EMAIL, 'Admin', SEED_ADMIN_PASSWORD);
+  syncManagedAccountPassword(SEED_MOD_EMAIL, 'Moderator', SEED_MOD_PASSWORD);
+}
+
+syncSeedPasswordsFromEnv();
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
 
 // ─── Express ───────────────────────────────────────────────────────────────
 const app = express();
 
 // Trust proxy headers (needed when behind Nginx/reverse proxy)
-app.set('trust proxy', 1);
+app.set('trust proxy', TRUST_PROXY);
+app.disable('x-powered-by');
 
 // Security headers
 app.use(helmet({
@@ -288,7 +317,6 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 // HTTP access log
 app.use(httpLogger);
 
-app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ─── Rate limiters ─────────────────────────────────────────────────────────
 
@@ -311,18 +339,56 @@ const authLimiter = rateLimit({
 });
 
 
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 80,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'QuÃ¡ nhiá»u thao tÃ¡c thay Ä‘á»•i dá»¯ liá»‡u, vui lÃ²ng thá»­ láº¡i sau.' },
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'QuÃ¡ nhiá»u láº§n táº£i file, vui lÃ²ng thá»­ láº¡i sau.' },
+});
+
 app.use('/api', globalLimiter);
 
 // ─── Multer ────────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: UPLOADS_DIR,
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+  filename: (req, file, cb) => cb(null, `${randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
 });
 const upload = multer({
   storage, limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: (req, file, cb) => {
-    cb(null, ['.stl', '.3mf', '.gcode'].includes(path.extname(file.originalname).toLowerCase()));
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = new Set(['.stl', '.3mf', '.gcode']);
+    const allowedMimePrefixes = ['application/', 'model/', 'text/'];
+    const mime = (file.mimetype || '').toLowerCase();
+    const allowedMime = !mime || allowedMimePrefixes.some((prefix) => mime.startsWith(prefix));
+    cb(null, allowedExts.has(ext) && allowedMime);
   }
 });
+
+const ALLOWED_JOB_STATUS_TRANSITIONS: Record<string, string[]> = {
+  Draft: ['Submitted', 'Cancelled'],
+  Submitted: ['Pending review', 'Approved', 'Needs Revision', 'Rejected', 'Cancelled'],
+  'Pending review': ['Approved', 'Needs Revision', 'Rejected', 'Cancelled'],
+  Approved: ['Scheduled', 'Printing', 'Cancelled'],
+  Scheduled: ['Printing', 'Cancelled'],
+  Printing: ['Done', 'Cancelled'],
+  'Needs Revision': ['Submitted', 'Cancelled'],
+  Rejected: [],
+  Cancelled: [],
+  Done: [],
+};
+
+function canTransitionJobStatus(currentStatus: string, nextStatus: string) {
+  return (ALLOWED_JOB_STATUS_TRANSITIONS[currentStatus] || []).includes(nextStatus);
+}
 
 // ─── Auth middleware ───────────────────────────────────────────────────────
 interface AuthReq extends Request { user?: any; }
@@ -347,8 +413,12 @@ function logAction(userId: string | null, userName: string | null, action: strin
 }
 
 function jobCode() {
-  const n = (db.prepare('SELECT COUNT(*) as c FROM print_jobs').get() as any).c + 1;
-  return `JOB-${String(n).padStart(3, '0')}`;
+  while (true) {
+    const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const id = `JOB-${suffix}`;
+    const existing = db.prepare('SELECT id FROM print_jobs WHERE id=?').get(id) as any;
+    if (!existing) return id;
+  }
 }
 
 function mapJob(j: any) {
@@ -356,6 +426,23 @@ function mapJob(j: any) {
 }
 
 function toSnake(s: string) { return s.replace(/([A-Z])/g, '_$1').toLowerCase(); }
+
+function getJobForAccess(jobId: string) {
+  return db.prepare('SELECT id,user_id FROM print_jobs WHERE id=?').get(jobId) as any;
+}
+
+function canAccessJob(user: any, jobId?: string | null) {
+  if (!jobId) return true;
+  const job = getJobForAccess(jobId);
+  if (!job) return false;
+  return user.role !== 'Student' || job.user_id === user.id;
+}
+
+function canAccessFile(user: any, fileName: string) {
+  const job = db.prepare('SELECT id,user_id FROM print_jobs WHERE file_name=?').get(fileName) as any;
+  if (!job) return false;
+  return user.role !== 'Student' || job.user_id === user.id;
+}
 
 // ─── Health check ──────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -374,7 +461,7 @@ app.get('/api/health', (req, res) => {
 
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
-app.post('/api/auth/register', validate(RegisterSchema), (req: Request, res: Response) => {
+app.post('/api/auth/register', authLimiter, validate(RegisterSchema), (req: Request, res: Response) => {
   const { email, password, fullName, studentId, phone, supervisor } = req.body;
   if (!isVjuEmail(email)) { res.status(400).json({ error: 'Chỉ chấp nhận email VJU (@st.vju.ac.vn hoặc @vju.ac.vn)' }); return; }
   if (db.prepare('SELECT id FROM users WHERE email=?').get(email)) { res.status(409).json({ error: 'Email đã được đăng ký' }); return; }
@@ -399,7 +486,7 @@ app.post('/api/auth/login', authLimiter, validate(LoginSchema), (req: Request, r
   }
   if (user.status === 'pending') { res.status(403).json({ error: 'Tài khoản đang chờ Admin phê duyệt' }); return; }
   if (user.status === 'suspended') { res.status(403).json({ error: 'Tài khoản đã bị tạm khoá' }); return; }
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role, fullName: user.full_name }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ id: user.id, email: user.email, role: user.role, fullName: user.full_name }, JWT_SECRET, { expiresIn: '7d', algorithm: 'HS256' });
   logAction(user.id, user.full_name, 'LOGIN');
   res.json({ token, user: { id: user.id, email: user.email, role: user.role, fullName: user.full_name, studentId: user.student_id, phone: user.phone, supervisor: user.supervisor } });
 });
@@ -408,6 +495,28 @@ app.get('/api/auth/me', requireAuth, (req: AuthReq, res: Response) => {
   const user = db.prepare('SELECT id,email,full_name,student_id,role,phone,supervisor,status FROM users WHERE id=?').get(req.user.id) as any;
   if (!user) { res.status(404).json({ error: 'Không tìm thấy người dùng' }); return; }
   res.json({ id: user.id, email: user.email, fullName: user.full_name, studentId: user.student_id, role: user.role, phone: user.phone, supervisor: user.supervisor, status: user.status });
+});
+
+app.post('/api/auth/change-password', writeLimiter, requireAuth, validate(ChangeOwnPasswordSchema), (req: AuthReq, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+  const user = db.prepare('SELECT id,password_hash,email,role,full_name FROM users WHERE id=?').get(req.user.id) as any;
+  if (!user) {
+    res.status(404).json({ error: 'Không tìm thấy tài khoản' });
+    return;
+  }
+  if (!bcrypt.compareSync(currentPassword, user.password_hash)) {
+    res.status(400).json({ error: 'Mật khẩu hiện tại không đúng' });
+    return;
+  }
+  if (bcrypt.compareSync(newPassword, user.password_hash)) {
+    res.status(400).json({ error: 'Mật khẩu mới phải khác mật khẩu hiện tại' });
+    return;
+  }
+
+  const passwordHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(passwordHash, user.id);
+  logAction(user.id, user.full_name, 'CHANGE_OWN_PASSWORD', `${user.email} (${user.role})`);
+  res.json({ success: true });
 });
 
 // ─── Queue (public view) ────────────────────────────────────────────────────
@@ -431,7 +540,7 @@ app.get('/api/jobs/:id', requireAuth, (req: AuthReq, res: Response) => {
   res.json(mapJob(job));
 });
 
-app.post('/api/jobs', requireAuth, validate(CreateJobSchema), (req: AuthReq, res: Response) => {
+app.post('/api/jobs', writeLimiter, requireAuth, validate(CreateJobSchema), (req: AuthReq, res: Response) => {
   const { jobName, description, fileName, estimatedTime, estimatedGrams, materialType, color, brand, materialSource, printMode, printerId, slotTime } = req.body;
   const resolvedPrintMode = printMode === 'lab_assisted' ? 'lab_assisted' : 'self';
   const resolvedMaterialType = materialType || 'PLA';
@@ -462,7 +571,7 @@ app.post('/api/jobs', requireAuth, validate(CreateJobSchema), (req: AuthReq, res
   res.status(201).json(mapJob(db.prepare('SELECT * FROM print_jobs WHERE id=?').get(id) as any));
 });
 
-app.patch('/api/jobs/:id', requireAuth, validate(PatchJobSchema), (req: AuthReq, res: Response) => {
+app.patch('/api/jobs/:id', writeLimiter, requireAuth, validate(PatchJobSchema), (req: AuthReq, res: Response) => {
   const job = db.prepare('SELECT * FROM print_jobs WHERE id=?').get(req.params.id) as any;
   if (!job) { res.status(404).json({ error: 'Không tìm thấy job' }); return; }
   const { status, rejectionReason, notes, printerId, slotTime, actualGrams, revisionNote, estimatedGrams, estimatedTime } = req.body;
@@ -472,7 +581,22 @@ app.patch('/api/jobs/:id', requireAuth, validate(PatchJobSchema), (req: AuthReq,
   }
   const printer = printerId ? db.prepare('SELECT name FROM printers WHERE id=?').get(printerId) as any : null;
   const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-  if (status) updates.status = status;
+  if (status) {
+    if (req.user.role === 'Student') {
+      if (status === 'Cancelled' && !['Draft', 'Submitted', 'Pending review', 'Approved', 'Scheduled', 'Needs Revision'].includes(job.status)) {
+        res.status(400).json({ error: 'Khong the huy job o trang thai hien tai' });
+        return;
+      }
+      if (status === 'Submitted' && !['Draft', 'Needs Revision'].includes(job.status)) {
+        res.status(400).json({ error: 'Chi co the gui lai job dang nhap hoac can chinh sua' });
+        return;
+      }
+    } else if (!canTransitionJobStatus(job.status, status)) {
+      res.status(400).json({ error: `Khong the chuyen trang thai tu ${job.status} sang ${status}` });
+      return;
+    }
+    updates.status = status;
+  }
   if (rejectionReason !== undefined) updates.rejection_reason = rejectionReason;
   if (notes !== undefined) updates.notes = notes;
   if (revisionNote !== undefined) updates.revision_note = revisionNote;
@@ -505,9 +629,27 @@ app.patch('/api/jobs/:id', requireAuth, validate(PatchJobSchema), (req: AuthReq,
   res.json(mapJob(db.prepare('SELECT * FROM print_jobs WHERE id=?').get(req.params.id) as any));
 });
 
-app.post('/api/jobs/upload', requireAuth, upload.single('file'), (req: AuthReq, res: Response) => {
+app.post('/api/jobs/upload', uploadLimiter, requireAuth, upload.single('file'), (req: AuthReq, res: Response) => {
   if (!req.file) { res.status(400).json({ error: 'Không có file' }); return; }
   res.json({ fileName: req.file.filename, originalName: req.file.originalname });
+});
+
+app.get('/api/files/:fileName', requireAuth, (req: AuthReq, res: Response) => {
+  const fileName = path.basename(req.params.fileName);
+  const filePath = path.resolve(UPLOADS_DIR, fileName);
+  if (!filePath.startsWith(path.resolve(UPLOADS_DIR))) {
+    res.status(400).json({ error: 'TÃªn file khÃ´ng há»£p lá»‡' });
+    return;
+  }
+  if (!canAccessFile(req.user, fileName)) {
+    res.status(403).json({ error: 'KhÃ´ng cÃ³ quyá»n truy cáº­p file nÃ y' });
+    return;
+  }
+  if (!existsSync(filePath)) {
+    res.status(404).json({ error: 'KhÃ´ng tÃ¬m tháº¥y file' });
+    return;
+  }
+  res.download(filePath);
 });
 
 // ─── Printers ─────────────────────────────────────────────────────────────
@@ -535,9 +677,9 @@ app.delete('/api/printers/:id', requireAuth, requireRole('Admin'), (req, res) =>
 
 const printerImageDir = path.join(DATA_DIR, 'printer-images');
 mkdirSync(printerImageDir, { recursive: true });
-const uploadPrinterImage = multer({ storage: multer.diskStorage({ destination: printerImageDir, filename: (_r, f, cb) => cb(null, Date.now() + path.extname(f.originalname)) }), limits: { fileSize: 5 * 1024 * 1024 } });
+const uploadPrinterImage = multer({ storage: multer.diskStorage({ destination: printerImageDir, filename: (_r, f, cb) => cb(null, `${randomUUID()}${path.extname(f.originalname).toLowerCase()}`) }), limits: { fileSize: 5 * 1024 * 1024 } });
 app.use('/printer-images', express.static(printerImageDir));
-app.post('/api/printers/upload-image', requireAuth, requireRole('Admin'), uploadPrinterImage.single('image'), (req: AuthReq, res: Response) => {
+app.post('/api/printers/upload-image', uploadLimiter, requireAuth, requireRole('Admin'), uploadPrinterImage.single('image'), (req: AuthReq, res: Response) => {
   if (!req.file) { res.status(400).json({ error: 'Không có file ảnh' }); return; }
   res.json({ url: `/printer-images/${req.file.filename}` });
 });
@@ -582,7 +724,7 @@ app.delete('/api/inventory/:id', requireAuth, requireRole('Admin'), (req, res) =
 // ─── Pricing ──────────────────────────────────────────────────────────────
 app.get('/api/pricing', (req, res) => res.json((db.prepare('SELECT * FROM pricing_rules').all() as any[]).map(r => ({ id: r.id, material: r.material, pricePerGram: r.price_per_gram }))));
 
-app.put('/api/pricing', requireAuth, requireRole('Admin'), validate(UpdatePricingSchema), (req: AuthReq, res: Response) => {
+app.put('/api/pricing', writeLimiter, requireAuth, requireRole('Admin'), validate(UpdatePricingSchema), (req: AuthReq, res: Response) => {
   const { rules } = req.body as { rules: Array<{ material: string; pricePerGram: number }> };
   const stmt = db.prepare('UPDATE pricing_rules SET price_per_gram=? WHERE material=?');
   rules.forEach(r => stmt.run(r.pricePerGram, r.material));
@@ -596,11 +738,29 @@ app.get('/api/users', requireAuth, requireRole('Admin'), (req, res) => {
     .map(u => ({ id: u.id, email: u.email, fullName: u.full_name, studentId: u.student_id, role: u.role, phone: u.phone, supervisor: u.supervisor, status: u.status, banReason: u.ban_reason, banUntil: u.ban_until, createdAt: u.created_at })));
 });
 
-app.patch('/api/users/:id', requireAuth, requireRole('Admin'), validate(PatchUserSchema), (req: AuthReq, res: Response) => {
+app.patch('/api/users/:id', writeLimiter, requireAuth, requireRole('Admin'), validate(PatchUserSchema), (req: AuthReq, res: Response) => {
   const { status, role, banReason, banUntil } = req.body;
   db.prepare('UPDATE users SET status=COALESCE(?,status),role=COALESCE(?,role),ban_reason=COALESCE(?,ban_reason),ban_until=COALESCE(?,ban_until) WHERE id=?')
     .run(status || null, role || null, banReason !== undefined ? banReason : null, banUntil !== undefined ? banUntil : null, req.params.id);
   logAction(req.user.id, req.user.fullName, 'UPDATE_USER', `${req.params.id} status:${status} role:${role} ban:${banReason}`);
+  res.json({ success: true });
+});
+
+app.patch('/api/users/:id/password', writeLimiter, requireAuth, requireRole('Admin'), validate(UpdateManagedPasswordSchema), (req: AuthReq, res: Response) => {
+  const user = db.prepare('SELECT id,role,full_name,email FROM users WHERE id=?').get(req.params.id) as any;
+  if (!user) {
+    res.status(404).json({ error: 'Không tìm thấy tài khoản' });
+    return;
+  }
+  if (!['Admin', 'Moderator'].includes(user.role)) {
+    res.status(403).json({ error: 'Chỉ được đổi mật khẩu cho tài khoản Admin hoặc Moderator' });
+    return;
+  }
+
+  const { newPassword } = req.body;
+  const passwordHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(passwordHash, user.id);
+  logAction(req.user.id, req.user.fullName, 'UPDATE_MANAGED_PASSWORD', `${user.email} (${user.role})`);
   res.json({ success: true });
 });
 
@@ -635,13 +795,31 @@ app.get('/api/stats', requireAuth, requireRole('Admin', 'Moderator'), (req, res)
 // ─── Messages ─────────────────────────────────────────────────────────────
 app.get('/api/messages', requireAuth, (req: AuthReq, res: Response) => {
   const jobId = req.query.jobId as string | undefined;
-  const msgs = jobId ? db.prepare('SELECT * FROM messages WHERE job_id=? ORDER BY created_at ASC').all(jobId)
-    : db.prepare('SELECT * FROM messages ORDER BY created_at DESC LIMIT 100').all();
+  if (!canAccessJob(req.user, jobId)) {
+    res.status(403).json({ error: 'KhÃ´ng cÃ³ quyá»n xem tin nháº¯n cá»§a job nÃ y' });
+    return;
+  }
+  const msgs = jobId
+    ? db.prepare('SELECT * FROM messages WHERE job_id=? ORDER BY created_at ASC').all(jobId)
+    : req.user.role === 'Student'
+      ? db.prepare(`
+        SELECT m.*
+        FROM messages m
+        LEFT JOIN print_jobs j ON j.id = m.job_id
+        WHERE m.job_id IS NULL OR j.user_id=?
+        ORDER BY m.created_at DESC
+        LIMIT 100
+      `).all(req.user.id)
+      : db.prepare('SELECT * FROM messages ORDER BY created_at DESC LIMIT 100').all();
   res.json((msgs as any[]).map(m => ({ id: m.id, userId: m.user_id, userName: m.user_name, userRole: m.user_role, jobId: m.job_id, content: m.content, createdAt: m.created_at })));
 });
 
-app.post('/api/messages', requireAuth, validate(PostMessageSchema), (req: AuthReq, res: Response) => {
+app.post('/api/messages', writeLimiter, requireAuth, validate(PostMessageSchema), (req: AuthReq, res: Response) => {
   const { content, jobId } = req.body;
+  if (!canAccessJob(req.user, jobId)) {
+    res.status(403).json({ error: 'KhÃ´ng cÃ³ quyá»n gáº¯n tin nháº¯n vÃ o job nÃ y' });
+    return;
+  }
   const id = randomUUID(); const now = new Date().toISOString();
   db.prepare('INSERT INTO messages (id,user_id,user_name,user_role,job_id,content,created_at) VALUES (?,?,?,?,?,?,?)')
     .run(id, req.user.id, req.user.fullName, req.user.role, jobId || null, content.trim(), now);
@@ -651,7 +829,7 @@ app.post('/api/messages', requireAuth, validate(PostMessageSchema), (req: AuthRe
 // ─── Service Fees ─────────────────────────────────────────────────────────
 app.get('/api/service-fees', requireAuth, (req, res) => res.json((db.prepare('SELECT * FROM service_fees ORDER BY name').all() as any[]).map(f => ({ id: f.id, name: f.name, label: f.label, amount: f.amount, description: f.description, enabled: f.enabled !== 0 }))));
 
-app.put('/api/service-fees', requireAuth, requireRole('Admin'), validate(UpdateServiceFeesSchema), (req: AuthReq, res: Response) => {
+app.put('/api/service-fees', writeLimiter, requireAuth, requireRole('Admin'), validate(UpdateServiceFeesSchema), (req: AuthReq, res: Response) => {
   const { fees } = req.body as { fees: Array<{ name: string; amount: number; enabled?: boolean }> };
   const stmt = db.prepare('UPDATE service_fees SET amount=?, enabled=? WHERE name=?');
   fees.forEach(f => stmt.run(f.amount, f.enabled !== false ? 1 : 0, f.name));
@@ -680,7 +858,7 @@ app.get('/api/settings/admin', requireAuth, requireRole('Admin'), (req, res) => 
   res.json(s);
 });
 
-app.put('/api/settings', requireAuth, requireRole('Admin'), (req: AuthReq, res: Response) => {
+app.put('/api/settings', writeLimiter, requireAuth, requireRole('Admin'), (req: AuthReq, res: Response) => {
   const settings = req.body as Record<string, string>;
   const stmt = db.prepare('INSERT OR REPLACE INTO lab_settings (key,value) VALUES (?,?)');
   // Only write allowlisted keys
@@ -798,3 +976,5 @@ process.on('unhandledRejection', (reason) => {
 });
 
 export default app;
+
+

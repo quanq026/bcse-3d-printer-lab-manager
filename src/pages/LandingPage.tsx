@@ -55,9 +55,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     [t]
   );
 
-  const contactHref = settings.contact_facebook || (settings.contact_email ? `mailto:${settings.contact_email}` : settings.contact_zalo || '#');
-  const guideUrl = settings.guide_url;
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');

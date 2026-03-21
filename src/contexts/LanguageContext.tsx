@@ -10,7 +10,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType>({
   lang: 'VN',
   setLang: () => {},
-  t: (key) => translations.VN[key],
+  t: (key) => String(translations.VN[key]),
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,7 +25,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const t = useCallback((key: TranslationKey): string => {
-    return translations[lang][key] ?? translations.VN[key];
+    return String(translations[lang][key] ?? translations.VN[key]);
   }, [lang]);
 
   return (

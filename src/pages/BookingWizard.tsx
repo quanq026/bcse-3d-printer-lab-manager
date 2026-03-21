@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText,
   Printer as PrinterIcon,
-  Calendar,
   Package,
   CheckCircle2,
   ChevronRight,
@@ -390,9 +389,13 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
     try {
       const resolvedColors = formData.colors.map(c => c === 'Other' ? (formData.customColor || 'Other') : c);
       const slotLabel = TIME_SLOTS.find(s => s.key === formData.preferredSlot)?.label || formData.preferredSlot;
-      const slotTime = formData.preferredSubSlot
-        ? `${slotLabel} (${formData.preferredSubSlot})`
-        : slotLabel;
+      const dateLabel = formData.preferredDate
+        ? new Date(formData.preferredDate + 'T12:00:00').toLocaleDateString('vi-VN')
+        : '';
+      const slotTime = [
+        dateLabel,
+        formData.preferredSubSlot ? `${slotLabel} (${formData.preferredSubSlot})` : slotLabel,
+      ].filter(Boolean).join(' - ');
       await api.createJob({
         printMode: formData.printMode,
         jobName: formData.jobName,
@@ -406,8 +409,6 @@ export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCanc
         materialSource: formData.materialSource,
         printerId: isSelf ? (formData.printerId || undefined) : undefined,
         slotTime: isSelf ? slotTime : undefined,
-        preferredDate: isSelf ? formData.preferredDate : undefined,
-        preferredSlot: isSelf ? slotLabel : undefined,
       });
       onComplete();
     } catch (err: unknown) {

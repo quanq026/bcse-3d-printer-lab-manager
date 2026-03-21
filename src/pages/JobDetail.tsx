@@ -14,7 +14,7 @@ import {
   Package,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { PrintJob, JobStatus, MaterialSource } from '../types';
+import { PrintJob, JobStatus } from '../types';
 import { StatusChip } from '../components/StatusChip';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
@@ -32,6 +32,30 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [resubmitting, setResubmitting] = useState(false);
   const [resubmitDone, setResubmitDone] = useState(false);
+
+  const handleFileDownload = async () => {
+    if (!job.fileName) return;
+    try {
+      const token = localStorage.getItem('lab_token');
+      const res = await fetch(api.downloadJobFile(job.fileName), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        throw new Error(copy.shared.pageLoadFailed);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = job.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : copy.shared.pageLoadFailed);
+    }
+  };
 
   const handleResubmit = async () => {
     setResubmitting(true);
@@ -250,7 +274,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
                   <p className="truncate text-sm font-semibold text-slate-900 dark:text-[var(--landing-text)]">{job.fileName}</p>
                   <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-slate-500 dark:text-[var(--landing-muted)]">{job.fileName?.split('.').pop() || 'FILE'}</p>
                 </div>
-                <button className="app-icon-button flex h-10 w-10 shrink-0 items-center justify-center self-center text-slate-500 hover:text-[var(--landing-accent)] dark:text-white/40">
+                <button onClick={handleFileDownload} className="app-icon-button flex h-10 w-10 shrink-0 items-center justify-center self-center text-slate-500 hover:text-[var(--landing-accent)] dark:text-white/40">
                   <Download size={18} />
                 </button>
               </div>
@@ -314,7 +338,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
         <div className="space-y-6">
           <div className="app-panel px-5 py-5 sm:px-6 sm:py-6">
             <p className="app-overline mb-4">{copy.jobDetail.attachments}</p>
-            <div className="app-panel-soft app-hover-box flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors">
+            <div className="app-panel-soft app-hover-box flex cursor-pointer items-center gap-3 px-3 py-3 transition-colors" onClick={handleFileDownload}>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-[rgba(20,33,43,0.08)] bg-[rgba(255,255,255,0.7)] text-[var(--landing-accent)] dark:border-white/8 dark:bg-white/4">
                 <FileText size={18} />
               </div>

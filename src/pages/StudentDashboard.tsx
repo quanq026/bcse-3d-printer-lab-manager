@@ -30,17 +30,6 @@ interface StudentDashboardProps {
 
 const CLOSED_STATUSES = [JobStatus.DONE, JobStatus.CANCELLED, JobStatus.REJECTED];
 const FLOW_STEPS = [JobStatus.SUBMITTED, JobStatus.APPROVED, JobStatus.PRINTING, JobStatus.DONE];
-const HISTORY_FILTERS = [
-  { value: 'all', label: 'Tất cả trạng thái' },
-  { value: JobStatus.SUBMITTED, label: 'Đã gửi' },
-  { value: JobStatus.APPROVED, label: 'Đã duyệt' },
-  { value: JobStatus.PRINTING, label: 'Đang in' },
-  { value: JobStatus.DONE, label: 'Hoàn thành' },
-  { value: JobStatus.REJECTED, label: 'Từ chối' },
-  { value: JobStatus.CANCELLED, label: 'Đã hủy' },
-  { value: JobStatus.NEEDS_REVISION, label: 'Cần chỉnh sửa' },
-];
-
 function formatDate(value?: string) {
   if (!value) return 'Chưa có mốc thời gian';
   const parsed = new Date(value);

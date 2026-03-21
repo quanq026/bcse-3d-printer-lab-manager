@@ -2,8 +2,6 @@ import type { User, AdminUser, PrintJob, Printer, FilamentInventory, PricingRule
 
 const BASE = '/api';
 type JobMutation = Omit<Partial<PrintJob>, 'printerId'> & {
-  preferredDate?: string;
-  preferredSlot?: string;
   printerId?: string | null;
 };
 
@@ -51,6 +49,8 @@ export const api = {
   register: (data: { email: string; password: string; fullName: string; studentId?: string; phone?: string; supervisor?: string }) =>
     post<{ message: string }>('/auth/register', data),
   me: () => get<User>('/auth/me'),
+  changeOwnPassword: (currentPassword: string, newPassword: string) =>
+    post<{ success: boolean }>('/auth/change-password', { currentPassword, newPassword }),
 
   // Jobs
   getJobs: () => get<PrintJob[]>('/jobs'),
@@ -120,6 +120,7 @@ export const api = {
   // Users (Admin)
   getUsers: () => get<AdminUser[]>('/users'),
   updateUser: (id: string, data: Partial<AdminUser>) => patch<{ success: boolean }>(`/users/${id}`, data),
+  updateManagedPassword: (id: string, newPassword: string) => patch<{ success: boolean }>(`/users/${id}/password`, { newPassword }),
   deleteUser: (id: string) => request<{ success: boolean }>('DELETE', `/users/${id}`),
 
   // Logs
@@ -135,6 +136,7 @@ export const api = {
   createBackup: () => post<{ file: string }>('/backup', {}),
   listBackups: () => get<BackupInfo[]>('/backups'),
   downloadBackup: (file: string) => `${BASE}/backups/${encodeURIComponent(file)}`,
+  downloadJobFile: (fileName: string) => `${BASE}/files/${encodeURIComponent(fileName)}`,
 
   // Lab Settings
   getSettings: () => get<Record<string, string>>('/settings'),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { AppIcon } from './AppIcon';
 import { useLang } from '../contexts/LanguageContext';
 import { getUiText } from '../lib/uiText';
@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activePage, onPageChange
     { id: 'users', icon: 'solar:users-group-rounded-bold', roles: [Role.ADMIN] },
     { id: 'analytics', icon: 'solar:chart-2-bold', roles: [Role.ADMIN] },
     { id: 'backup', icon: 'solar:archive-bold', roles: [Role.ADMIN] },
-    { id: 'settings', icon: 'solar:settings-bold', roles: [Role.ADMIN] },
+    { id: 'settings', icon: 'solar:settings-bold', roles: [Role.STUDENT, Role.MODERATOR, Role.ADMIN] },
     { id: 'chat', icon: 'solar:chat-round-dots-bold', roles: [Role.STUDENT, Role.MODERATOR, Role.ADMIN] },
   ];
 

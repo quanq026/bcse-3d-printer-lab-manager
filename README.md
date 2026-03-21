@@ -68,6 +68,25 @@ Biến quan trọng:
 - `ALLOWED_ORIGINS`: danh sách origin cho CORS
 - `DATA_DIR`: thư mục dữ liệu runtime (mặc định `./data`)
 - `LOG_LEVEL`: `error | warn | info | debug`
+- `SEED_ADMIN_PASSWORD` / `SEED_MOD_PASSWORD`: dùng để tạo tài khoản admin/mod khi DB còn rỗng
+- `SYNC_SEED_PASSWORDS=true`: đồng bộ lại mật khẩu admin/mod từ `.env` cho DB đã tồn tại trong lúc khởi động
+
+## Đổi mật khẩu admin/mod bằng `.env`
+
+Hiện tại hệ thống quản lý 2 tài khoản mặc định theo email:
+
+- `admin@vju.ac.vn`
+- `mod@vju.ac.vn`
+
+Nếu bạn chỉ sửa `SEED_ADMIN_PASSWORD` hoặc `SEED_MOD_PASSWORD`, thay đổi đó chỉ áp dụng khi bảng `users` đang rỗng.
+
+Để ép hệ thống cập nhật mật khẩu cho DB đang dùng:
+
+1. Sửa `SEED_ADMIN_PASSWORD` và/hoặc `SEED_MOD_PASSWORD` trong `.env`
+2. Thêm `SYNC_SEED_PASSWORDS=true`
+3. Khởi động lại backend một lần
+4. Đăng nhập bằng mật khẩu mới
+5. Xóa hoặc tắt `SYNC_SEED_PASSWORDS` sau khi đổi xong để tránh reset lại ở các lần restart sau
 ## License
 
 MIT

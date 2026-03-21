@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AppIcon } from '../components/AppIcon';
+import { AppToast } from '../components/feedback/AppToast';
+import { ConfirmDialog } from '../components/feedback/ConfirmDialog';
+import { useToast } from '../components/feedback/useToast';
 import { useLang } from '../contexts/LanguageContext';
 import { MaterialType, type FilamentInventory } from '../types';
 import { api } from '../lib/api';
@@ -80,6 +83,8 @@ export const AdminInventory: React.FC = () => {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [newItem, setNewItem] = useState<InventoryDraft>(emptyNew());
+  const { toast, dismissToast, showError, showSuccess } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -121,20 +126,27 @@ export const AdminInventory: React.FC = () => {
       await api.updateInventory(id, { remainingGrams: Number.parseFloat(editGrams) });
       await fetchInventory();
       setEditId(null);
+      showSuccess(copy.updateStock);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(copy.deleteConfirm)) return;
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.deleteInventory(id);
-      setInventory((current) => current.filter((item) => item.id !== id));
+      await api.deleteInventory(deleteTarget);
+      setInventory((current) => current.filter((item) => item.id !== deleteTarget));
+      setDeleteTarget(null);
+      showSuccess(copy.deleteReel);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     }
   };
 
@@ -146,8 +158,9 @@ export const AdminInventory: React.FC = () => {
       await fetchInventory();
       setShowAdd(false);
       setNewItem(emptyNew());
+      showSuccess(copy.saveReel);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
     }
@@ -185,6 +198,17 @@ export const AdminInventory: React.FC = () => {
 
   return (
     <div className="app-admin-squared app-admin-compact space-y-6">
+      <AppToast toast={toast} onClose={dismissToast} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={copy.deleteReel}
+        body={copy.deleteConfirm}
+        confirmLabel={copy.deleteReel}
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={() => { void confirmDelete(); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <section className="app-panel app-hover-box relative overflow-hidden rounded-[32px] px-5 py-6 sm:px-8 sm:py-8">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <div className="space-y-4">

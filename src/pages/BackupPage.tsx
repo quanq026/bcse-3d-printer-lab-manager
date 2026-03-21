@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, HardDrive, Loader2, Plus, RefreshCw } from 'lucide-react';
 import { AppIcon } from '../components/AppIcon';
+import { AppToast } from '../components/feedback/AppToast';
+import { useToast } from '../components/feedback/useToast';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
@@ -23,6 +25,7 @@ export const BackupPage: React.FC = () => {
   const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const { toast, dismissToast, showError, showSuccess } = useToast();
 
   const fetchBackups = async () => {
     setLoading(true);
@@ -44,10 +47,10 @@ export const BackupPage: React.FC = () => {
     setCreating(true);
     try {
       const result = await api.createBackup();
-      alert(fillText(copy.createdAlert, { file: result.file }));
+      showSuccess(fillText(copy.createdAlert, { file: result.file }));
       fetchBackups();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setCreating(false);
     }
@@ -58,6 +61,7 @@ export const BackupPage: React.FC = () => {
 
   return (
     <div className="app-admin-squared app-admin-compact space-y-6">
+      <AppToast toast={toast} onClose={dismissToast} />
       <section className="app-panel app-hover-box relative overflow-hidden rounded-[32px] px-5 py-6 sm:px-8 sm:py-8">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
           <div className="space-y-4">

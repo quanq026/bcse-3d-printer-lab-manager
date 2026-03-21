@@ -46,6 +46,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
     api.getSettings().then(setSettings).catch(() => { });
   }, []);
 
+  useEffect(() => {
+    const authNotice = sessionStorage.getItem('lab_auth_notice');
+    if (!authNotice) return;
+    setTab('login');
+    setSuccess(authNotice);
+    sessionStorage.removeItem('lab_auth_notice');
+  }, []);
+
   const heroFeatures = useMemo(
     () => [
       { icon: 'solar:document-text-bold', title: t('featurePolicy'), desc: t('featurePolicyDesc') },

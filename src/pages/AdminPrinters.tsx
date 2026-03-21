@@ -13,6 +13,9 @@ import {
   X,
 } from 'lucide-react';
 import { AppIcon } from '../components/AppIcon';
+import { AppToast } from '../components/feedback/AppToast';
+import { ConfirmDialog } from '../components/feedback/ConfirmDialog';
+import { useToast } from '../components/feedback/useToast';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
 import { fillText, getUiText } from '../lib/uiText';
@@ -76,6 +79,8 @@ export const AdminPrinters: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { toast, dismissToast, showError, showSuccess } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchPrinters = async () => {
     setLoading(true);
@@ -120,8 +125,9 @@ export const AdminPrinters: React.FC = () => {
     try {
       const result = await api.uploadPrinterImage(file);
       setForm((current) => ({ ...current, imageUrl: result.url }));
+      showSuccess(copy.uploadImage);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setImageUploading(false);
     }
@@ -138,11 +144,11 @@ export const AdminPrinters: React.FC = () => {
 
   const handleSave = async () => {
     if (!form.name || !form.buildVolume) {
-      alert(copy.validationName);
+      showError(copy.validationName);
       return;
     }
     if (form.supportedMaterials.length === 0) {
-      alert(copy.validationMaterial);
+      showError(copy.validationMaterial);
       return;
     }
 
@@ -155,21 +161,29 @@ export const AdminPrinters: React.FC = () => {
       }
       await fetchPrinters();
       setShowModal(false);
+      showSuccess(editId ? copy.saveEdit : copy.saveAdd);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(fillText(copy.deleteConfirm, { name }))) return;
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
     setDeletingId(id);
     try {
       await api.deletePrinter(id);
+      setDeleteTarget(null);
       await fetchPrinters();
+      showSuccess('Printer removed successfully.');
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setDeletingId(null);
     }
@@ -179,8 +193,9 @@ export const AdminPrinters: React.FC = () => {
     try {
       await api.updatePrinter(id, { status });
       await fetchPrinters();
+      showSuccess(statusLabels[status] || status);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     }
   };
 
@@ -199,6 +214,17 @@ export const AdminPrinters: React.FC = () => {
 
   return (
     <div className="app-admin-squared app-admin-compact space-y-6">
+      <AppToast toast={toast} onClose={dismissToast} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete printer"
+        body={deleteTarget ? fillText(copy.deleteConfirm, { name: deleteTarget.name }) : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={() => { void confirmDelete(); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <section className="app-panel app-hover-box relative overflow-hidden rounded-[32px] px-5 py-6 sm:px-8 sm:py-8">
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <div className="space-y-4">

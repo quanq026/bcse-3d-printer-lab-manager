@@ -7,7 +7,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { useAuth } from './contexts/AuthContext';
 import { useLang } from './contexts/LanguageContext';
 import { api } from './lib/api';
-import { fillText, getUiText } from './lib/uiText';
+import { fillText, getSettingsExperienceCopy, getUiText } from './lib/uiText';
 import { LandingPage } from './pages/LandingPage';
 import type { PrintJob } from './types';
 import { Role } from './types';
@@ -107,6 +107,8 @@ export default function App() {
           ? fillText(copy.shared.jobDetailSelectedNote, { id: selectedJob.id })
           : copy.pageMeta['job-detail'].note,
       }
+    : activePage === 'settings'
+      ? getSettingsExperienceCopy(lang, role).page
     : (copy.pageMeta as Record<string, { eyebrow: string; title: string; note: string }>)[activePage] || copy.pageMeta.dashboard;
 
   const roleCopy = {
@@ -123,7 +125,7 @@ export default function App() {
       case 'dashboard':
         return <StudentDashboard activePage="dashboard" onNewBooking={() => handlePageChange('booking')} onSelectJob={navigateToJob} onPageChange={handlePageChange} role={role} currentUser={currentUser} />;
       case 'booking':
-        return <BookingWizard onComplete={() => handlePageChange('dashboard')} onCancel={() => handlePageChange('dashboard')} currentUser={currentUser} />;
+        return <BookingWizard onComplete={() => handlePageChange('dashboard')} onCancel={() => handlePageChange('dashboard')} />;
       case 'history':
         return <StudentDashboard activePage="history" onNewBooking={() => handlePageChange('booking')} onSelectJob={navigateToJob} onPageChange={handlePageChange} role={role} currentUser={currentUser} />;
       case 'queue':

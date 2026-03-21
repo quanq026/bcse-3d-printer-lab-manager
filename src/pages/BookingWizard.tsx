@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import type { User as AppUser, Printer, PricingRule, FilamentInventory, ServiceFee } from '../types';
+import type { Printer, PricingRule, FilamentInventory, ServiceFee } from '../types';
 import { MaterialType, MaterialSource } from '../types';
 import { api } from '../lib/api';
 import { FilePreview } from '../components/FilePreview';
@@ -31,7 +31,6 @@ type PrintMode = 'self' | 'lab_assisted';
 interface BookingWizardProps {
   onComplete: () => void;
   onCancel: () => void;
-  currentUser: AppUser | null;
 }
 
 // Color name → hex mapping for display
@@ -54,7 +53,7 @@ const SUB_SLOTS: Record<string, string[]> = {
   evening: ['17h–18h', '18h–19h', '19h–20h'],
 };
 
-export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCancel, currentUser }) => {
+export const BookingWizard: React.FC<BookingWizardProps> = ({ onComplete, onCancel }) => {
   const { t, lang } = useLang();
   const text = getUiText(lang);
   const bw = text.bookingWizard;

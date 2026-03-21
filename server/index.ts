@@ -67,6 +67,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
+    token_version INTEGER NOT NULL DEFAULT 0,
     full_name TEXT NOT NULL,
     student_id TEXT,
     role TEXT NOT NULL DEFAULT 'Student',
@@ -172,6 +173,7 @@ try { db.exec(`ALTER TABLE print_jobs ADD COLUMN revision_note TEXT`); } catch {
 try { db.exec(`ALTER TABLE print_jobs ADD COLUMN brand TEXT`); } catch { }
 try { db.exec(`ALTER TABLE users ADD COLUMN ban_reason TEXT`); } catch { }
 try { db.exec(`ALTER TABLE users ADD COLUMN ban_until TEXT`); } catch { }
+try { db.exec(`ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`); } catch { }
 try { db.exec(`ALTER TABLE print_jobs ADD COLUMN print_mode TEXT NOT NULL DEFAULT 'self'`); } catch { }
 try { db.exec(`ALTER TABLE service_fees ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1`); } catch { }
 try { db.prepare(`UPDATE service_fees SET amount=100, description='Phí dịch vụ in hộ (đ/gram)' WHERE name='service_fee' AND amount=20000`).run(); } catch { }
@@ -189,11 +191,11 @@ function seedIfEmpty() {
   const userCount = (db.prepare('SELECT COUNT(*) as c FROM users').get() as any).c;
   if (userCount === 0) {
     const hash = bcrypt.hashSync(SEED_ADMIN_PASSWORD, 10);
-    db.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status,created_at) VALUES (?,?,?,?,?,?,?)`)
-      .run(randomUUID(), SEED_ADMIN_EMAIL, hash, 'Admin BCSE Lab', 'Admin', 'active', new Date().toISOString());
+    db.prepare(`INSERT INTO users (id,email,password_hash,token_version,full_name,role,status,created_at) VALUES (?,?,?,?,?,?,?,?)`)
+      .run(randomUUID(), SEED_ADMIN_EMAIL, hash, 0, 'Admin BCSE Lab', 'Admin', 'active', new Date().toISOString());
     const modHash = bcrypt.hashSync(SEED_MOD_PASSWORD, 10);
-    db.prepare(`INSERT INTO users (id,email,password_hash,full_name,role,status,created_at) VALUES (?,?,?,?,?,?,?)`)
-      .run(randomUUID(), SEED_MOD_EMAIL, modHash, 'Moderator Lab', 'Moderator', 'active', new Date().toISOString());
+    db.prepare(`INSERT INTO users (id,email,password_hash,token_version,full_name,role,status,created_at) VALUES (?,?,?,?,?,?,?,?)`)
+      .run(randomUUID(), SEED_MOD_EMAIL, modHash, 0, 'Moderator Lab', 'Moderator', 'active', new Date().toISOString());
   }
   const printerCount = (db.prepare('SELECT COUNT(*) as c FROM printers').get() as any).c;
   if (printerCount === 0) {
@@ -260,7 +262,7 @@ function syncManagedAccountPassword(email: string, role: string, password: strin
   }
 
   const passwordHash = bcrypt.hashSync(password, 10);
-  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(passwordHash, user.id);
+  db.prepare('UPDATE users SET password_hash=?, token_version=token_version+1 WHERE id=?').run(passwordHash, user.id);
   logger.info('Managed account password synced from environment', { email, role });
 }
 
@@ -392,13 +394,54 @@ function canTransitionJobStatus(currentStatus: string, nextStatus: string) {
 
 // ─── Auth middleware ───────────────────────────────────────────────────────
 interface AuthReq extends Request { user?: any; }
+interface AuthTokenPayload {
+  id: string;
+  email: string;
+  role: string;
+  fullName: string;
+  tokenVersion: number;
+  iat?: number;
+  exp?: number;
+}
+
+function createAuthToken(user: { id: string; email: string; role: string; full_name: string; token_version?: number }) {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      fullName: user.full_name,
+      tokenVersion: user.token_version ?? 0,
+    },
+    JWT_SECRET,
+    { expiresIn: '7d', algorithm: 'HS256' }
+  );
+}
 
 function requireAuth(req: AuthReq, res: Response, next: NextFunction) {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) { res.status(401).json({ error: 'Chưa đăng nhập' }); return; }
-  try { req.user = jwt.verify(token, JWT_SECRET); next(); }
-  catch { res.status(401).json({ error: 'Token không hợp lệ' }); }
+  if (!token) { res.status(401).json({ error: 'Ch??a ????ng nh???p' }); return; }
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    const user = db.prepare('SELECT id,email,full_name,role,status,token_version FROM users WHERE id=?').get(payload.id) as any;
+    if (!user) { res.status(401).json({ error: 'Phi??n ????ng nh???p kh??ng c??n h???p l???' }); return; }
+    if (user.token_version !== (payload.tokenVersion ?? 0)) {
+      res.status(401).json({ error: 'Phi??n ????ng nh???p ???? h???t hi???u l???c. Vui l??ng ????ng nh???p l???i.' });
+      return;
+    }
+    req.user = {
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
+      status: user.status,
+      tokenVersion: user.token_version,
+    };
+    next();
+  }
+  catch { res.status(401).json({ error: 'Token kh??ng h???p l???' }); }
 }
+
 
 function requireRole(...roles: string[]) {
   return (req: AuthReq, res: Response, next: NextFunction) => {
@@ -469,8 +512,8 @@ app.post('/api/auth/register', authLimiter, validate(RegisterSchema), (req: Requ
 
   const id = randomUUID();
   const hash = bcrypt.hashSync(password, 10);
-  db.prepare(`INSERT INTO users (id,email,password_hash,full_name,student_id,phone,supervisor,role,status,created_at) VALUES (?,?,?,?,?,?,?,'Student','active',?)`)
-    .run(id, email, hash, fullName, studentId || null, phone || null, supervisor || null, new Date().toISOString());
+  db.prepare(`INSERT INTO users (id,email,password_hash,token_version,full_name,student_id,phone,supervisor,role,status,created_at) VALUES (?,?,?,?,?,?,?,?,'Student','active',?)`)
+    .run(id, email, hash, 0, fullName, studentId || null, phone || null, supervisor || null, new Date().toISOString());
   logAction(id, fullName, 'REGISTER', `Email: ${email}`);
   logger.info('User registered', { email });
   res.json({ message: 'Đăng ký thành công. Bạn có thể đăng nhập ngay bây giờ.' });
@@ -486,7 +529,7 @@ app.post('/api/auth/login', authLimiter, validate(LoginSchema), (req: Request, r
   }
   if (user.status === 'pending') { res.status(403).json({ error: 'Tài khoản đang chờ Admin phê duyệt' }); return; }
   if (user.status === 'suspended') { res.status(403).json({ error: 'Tài khoản đã bị tạm khoá' }); return; }
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role, fullName: user.full_name }, JWT_SECRET, { expiresIn: '7d', algorithm: 'HS256' });
+  const token = createAuthToken(user);
   logAction(user.id, user.full_name, 'LOGIN');
   res.json({ token, user: { id: user.id, email: user.email, role: user.role, fullName: user.full_name, studentId: user.student_id, phone: user.phone, supervisor: user.supervisor } });
 });
@@ -514,7 +557,7 @@ app.post('/api/auth/change-password', writeLimiter, requireAuth, validate(Change
   }
 
   const passwordHash = bcrypt.hashSync(newPassword, 10);
-  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(passwordHash, user.id);
+  db.prepare('UPDATE users SET password_hash=?, token_version=token_version+1 WHERE id=?').run(passwordHash, user.id);
   logAction(user.id, user.full_name, 'CHANGE_OWN_PASSWORD', `${user.email} (${user.role})`);
   res.json({ success: true });
 });
@@ -759,7 +802,7 @@ app.patch('/api/users/:id/password', writeLimiter, requireAuth, requireRole('Adm
 
   const { newPassword } = req.body;
   const passwordHash = bcrypt.hashSync(newPassword, 10);
-  db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(passwordHash, user.id);
+  db.prepare('UPDATE users SET password_hash=?, token_version=token_version+1 WHERE id=?').run(passwordHash, user.id);
   logAction(req.user.id, req.user.fullName, 'UPDATE_MANAGED_PASSWORD', `${user.email} (${user.role})`);
   res.json({ success: true });
 });

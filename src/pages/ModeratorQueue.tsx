@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Calculator,
   Check,
@@ -13,6 +13,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { AppToast } from '../components/feedback/AppToast';
+import { ConfirmDialog } from '../components/feedback/ConfirmDialog';
+import { useToast } from '../components/feedback/useToast';
 import { StatusChip } from '../components/StatusChip';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
@@ -65,17 +68,30 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
   const [quoteSaving, setQuoteSaving] = useState(false);
   const [pricing, setPricing] = useState<PricingRule[]>([]);
   const [serviceFees, setServiceFees] = useState<ServiceFee[]>([]);
+  const selectedIdRef = useRef<string | null>(null);
+  const { toast, dismissToast, showError, showSuccess } = useToast();
+  const [confirmState, setConfirmState] = useState<{
+    title: string;
+    body: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
 
   const statusLabel = (value: JobStatus | string) => shared.jobStatuses[value as keyof typeof shared.jobStatuses] || value;
   const materialSourceLabel = (value: MaterialSource | string) => shared.materialSources[value as keyof typeof shared.materialSources] || value;
 
-  const fetchJobs = async () => {
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.getJobs();
       setJobs(data);
 
-      const nextSelection = data.find((job: PrintJob) => job.id === selectedId)
+      const nextSelection = data.find((job: PrintJob) => job.id === selectedIdRef.current)
         || data.find((job: PrintJob) => ACTIVE_STATUSES.includes(job.status))
         || data[0];
 
@@ -85,14 +101,14 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchJobs();
+    void fetchJobs();
     api.getPrinters().then(setPrinters).catch(console.error);
     api.getPricing().then(setPricing).catch(console.error);
     api.getServiceFees().then(setServiceFees).catch(console.error);
-  }, []);
+  }, [fetchJobs]);
 
   const activeJobs = useMemo(
     () => jobs.filter((job) => ACTIVE_STATUSES.includes(job.status)),
@@ -122,8 +138,9 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
       await fetchJobs();
       setModeratorNote('');
       setActualGrams('');
+      showSuccess(statusLabel(status));
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : copy.actionError);
+      showError(err instanceof Error ? err.message : copy.actionError);
     } finally {
       setActionLoading(false);
     }
@@ -134,26 +151,32 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
     try {
       await api.updateJob(selectedJob.id, { printerId: printerId || null });
       await fetchJobs();
+      showSuccess(copy.assignPrinter);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : copy.updateError);
+      showError(err instanceof Error ? err.message : copy.updateError);
     }
   };
 
   const handleStatusOverride = async (newStatus: JobStatus) => {
     if (!selectedJob) return;
-    if (!confirm(fillText(copy.confirmStatus, { from: statusLabel(selectedJob.status), to: statusLabel(newStatus) }))) {
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      await api.updateJob(selectedJob.id, { status: newStatus });
-      await fetchJobs();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : copy.updateError);
-    } finally {
-      setActionLoading(false);
-    }
+    setConfirmState({
+      title: copy.statusQuickTitle,
+      body: fillText(copy.confirmStatus, { from: statusLabel(selectedJob.status), to: statusLabel(newStatus) }),
+      confirmLabel: statusLabel(newStatus),
+      onConfirm: async () => {
+        setConfirmState(null);
+        setActionLoading(true);
+        try {
+          await api.updateJob(selectedJob.id, { status: newStatus });
+          await fetchJobs();
+          showSuccess(statusLabel(newStatus));
+        } catch (err: unknown) {
+          showError(err instanceof Error ? err.message : copy.updateError);
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   const renderQuoteCard = () => {
@@ -209,9 +232,9 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
               await api.updateJob(selectedJob.id, { estimatedGrams: Number.parseInt(quoteGrams, 10) });
               await fetchJobs();
               setQuoteGrams('');
-              alert(copy.quoteSaved);
+              showSuccess(copy.quoteSaved);
             } catch (err: unknown) {
-              alert(err instanceof Error ? err.message : copy.updateError);
+              showError(err instanceof Error ? err.message : copy.updateError);
             } finally {
               setQuoteSaving(false);
             }
@@ -325,7 +348,7 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
             <button
               onClick={() => {
                 if (!moderatorNote.trim()) {
-                  alert(copy.revisionNoteAlert);
+                  showError(copy.revisionNoteAlert);
                   return;
                 }
                 doAction(JobStatus.NEEDS_REVISION, { revisionNote: moderatorNote });
@@ -371,6 +394,17 @@ export const ModeratorQueue: React.FC<ModeratorQueueProps> = ({ onSelectJob }) =
 
   return (
     <div className="app-admin-squared app-admin-compact space-y-5">
+      <AppToast toast={toast} onClose={dismissToast} />
+      <ConfirmDialog
+        open={!!confirmState}
+        title={confirmState?.title || ''}
+        body={confirmState?.body || ''}
+        confirmLabel={confirmState?.confirmLabel || 'Confirm'}
+        cancelLabel="Cancel"
+        destructive={confirmState?.destructive}
+        onConfirm={() => { void confirmState?.onConfirm(); }}
+        onCancel={() => setConfirmState(null)}
+      />
       <section className="app-panel flex flex-col gap-6 px-5 py-5 lg:px-6 lg:py-6">
         <div>
           <p className="app-eyebrow">{copy.heroEyebrow}</p>

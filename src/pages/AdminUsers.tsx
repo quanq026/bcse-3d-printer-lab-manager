@@ -15,6 +15,9 @@ import {
   Users,
   XCircle,
 } from 'lucide-react';
+import { AppToast } from '../components/feedback/AppToast';
+import { ConfirmDialog } from '../components/feedback/ConfirmDialog';
+import { useToast } from '../components/feedback/useToast';
 import { AppIcon } from '../components/AppIcon';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
@@ -61,6 +64,8 @@ export const AdminUsers: React.FC = () => {
   const [banModal, setBanModal] = useState<{ user: AdminUser; type: 'temporary' | 'permanent' } | null>(null);
   const [banReason, setBanReason] = useState('');
   const [banDays, setBanDays] = useState('7');
+  const { toast, dismissToast, showError, showSuccess } = useToast();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -83,21 +88,29 @@ export const AdminUsers: React.FC = () => {
     try {
       await api.updateUser(id, data);
       await fetchUsers();
+      showSuccess(copy.approve);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
   };
 
   const doDelete = async (id: string, name: string) => {
-    if (!confirm(fillText(copy.deleteConfirm, { name }))) return;
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
     setActionLoading(id);
     try {
       await api.deleteUser(id);
+      setDeleteTarget(null);
       await fetchUsers();
+      showSuccess(copy.delete);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
@@ -120,8 +133,9 @@ export const AdminUsers: React.FC = () => {
       setBanModal(null);
       setBanReason('');
       await fetchUsers();
+      showSuccess(copy.suspend);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
@@ -132,8 +146,9 @@ export const AdminUsers: React.FC = () => {
     try {
       await api.updateUser(id, { status: 'active', banReason: '', banUntil: '' });
       await fetchUsers();
+      showSuccess(copy.restore);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Unknown error');
+      showError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setActionLoading(null);
     }
@@ -277,6 +292,17 @@ export const AdminUsers: React.FC = () => {
 
   return (
     <div className="app-admin-squared app-admin-compact space-y-6">
+      <AppToast toast={toast} onClose={dismissToast} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={copy.delete}
+        body={deleteTarget ? fillText(copy.deleteConfirm, { name: deleteTarget.name }) : ''}
+        confirmLabel={copy.delete}
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={() => { void confirmDelete(); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <section className="app-panel app-hover-box relative overflow-hidden rounded-[32px] px-5 py-6 sm:px-8 sm:py-8">
         <div className="space-y-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">

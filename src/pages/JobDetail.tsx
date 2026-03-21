@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ArrowLeft,
   Clock,
-  CreditCard,
   FileText,
   MessageSquare,
   Download,
@@ -14,12 +13,16 @@ import {
   Package,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { AppToast } from '../components/feedback/AppToast';
+import { ConfirmDialog } from '../components/feedback/ConfirmDialog';
 import { PrintJob, JobStatus } from '../types';
+import { useToast } from '../components/feedback/useToast';
 import { StatusChip } from '../components/StatusChip';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 import { useLang } from '../contexts/LanguageContext';
-import { getUiText, fillText } from '../lib/uiText';
+import { getJobDetailExperience, getUiText, fillText } from '../lib/uiText';
 
 interface JobDetailProps {
   job: PrintJob;
@@ -27,11 +30,15 @@ interface JobDetailProps {
 }
 
 export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
+  const { role } = useAuth();
   const { lang } = useLang();
   const copy = getUiText(lang);
+  const jobDetailExperience = getJobDetailExperience(lang, role);
+  const { toast, dismissToast, showError, showSuccess } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [resubmitting, setResubmitting] = useState(false);
   const [resubmitDone, setResubmitDone] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const handleFileDownload = async () => {
     if (!job.fileName) return;
@@ -53,7 +60,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
       anchor.remove();
       URL.revokeObjectURL(url);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : copy.shared.pageLoadFailed);
+      showError(err instanceof Error ? err.message : copy.shared.pageLoadFailed);
     }
   };
 
@@ -62,8 +69,9 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
     try {
       await api.resubmitJob(job.id);
       setResubmitDone(true);
+      showSuccess(copy.jobDetail.resubmitSuccess);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : copy.jobDetail.resubmitFailed);
+      showError(err instanceof Error ? err.message : copy.jobDetail.resubmitFailed);
     } finally {
       setResubmitting(false);
     }
@@ -85,9 +93,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
     { id: 'overview', label: copy.jobDetail.tabOverview, icon: FileText },
     { id: 'timeline', label: copy.jobDetail.tabTimeline, icon: Clock },
     { id: 'files', label: copy.jobDetail.tabFiles, icon: Package },
-    { id: 'payment', label: copy.jobDetail.tabPayment, icon: CreditCard },
-    { id: 'messages', label: copy.jobDetail.tabMessages, icon: MessageSquare },
-  ];
+  ].filter((tab) => jobDetailExperience.visibleTabs.includes(tab.id));
 
   return (
     <motion.div
@@ -95,6 +101,26 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
       animate={{ opacity: 1, y: 0 }}
       className="mx-auto max-w-5xl space-y-6"
     >
+      <AppToast toast={toast} onClose={dismissToast} />
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        title={copy.jobDetail.cancelRequest}
+        body={copy.jobDetail.cancelConfirm}
+        confirmLabel={copy.jobDetail.cancelRequest}
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={async () => {
+          setCancelDialogOpen(false);
+          try {
+            await api.updateJob(job.id, { status: JobStatus.CANCELLED });
+            showSuccess(copy.jobDetail.cancelSuccess);
+            onBack();
+          } catch (err: unknown) {
+            showError(err instanceof Error ? err.message : copy.jobDetail.cancelFailed);
+          }
+        }}
+        onCancel={() => setCancelDialogOpen(false)}
+      />
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
           <button
@@ -113,22 +139,9 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
         </div>
         <div className="flex flex-wrap items-center gap-3 lg:shrink-0 lg:justify-end">
           <StatusChip status={job.status} />
-          <button className="app-secondary-button inline-flex min-h-[44px] items-center justify-center gap-2 px-4 text-sm font-semibold">
-            <Download size={16} />
-            {copy.jobDetail.invoice}
-          </button>
           {![JobStatus.DONE, JobStatus.CANCELLED, JobStatus.REJECTED].includes(job.status) && (
             <button
-              onClick={async () => {
-                if (!confirm(copy.jobDetail.cancelConfirm)) return;
-                try {
-                  await api.updateJob(job.id, { status: JobStatus.CANCELLED });
-                  alert(copy.jobDetail.cancelSuccess);
-                  onBack();
-                } catch (err: unknown) {
-                  alert(err instanceof Error ? err.message : copy.jobDetail.cancelFailed);
-                }
-              }}
+              onClick={() => setCancelDialogOpen(true)}
               className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-rose-200 bg-rose-100/80 px-4 text-[13px] font-black uppercase tracking-[0.16em] text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"
             >
               {copy.jobDetail.cancelRequest}
@@ -281,7 +294,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
             </div>
           )}
 
-          {activeTab === 'payment' && (
+          {jobDetailExperience.showPaymentPanel && activeTab === 'payment' && (
             <div className="space-y-6">
               <div className="app-panel px-5 py-5 sm:px-6 sm:py-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -324,7 +337,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
             </div>
           )}
 
-          {activeTab === 'messages' && (
+          {jobDetailExperience.showMessagesPanel && activeTab === 'messages' && (
             <div className="app-panel flex min-h-[300px] flex-col items-center justify-center px-5 py-10 text-center sm:px-6 sm:py-16">
               <div className="mb-4 flex h-14 w-14 items-center justify-center border border-[rgba(30,23,19,0.08)] bg-white/50 text-slate-400 dark:border-white/8 dark:bg-white/4 dark:text-white/38">
                 <MessageSquare size={24} strokeWidth={1.5} />

@@ -2151,3 +2151,57 @@ export function fillText(template: string, params?: Record<string, string | numb
   return template.replace(/\{(\w+)\}/g, (_, key) => String(params[key] ?? ''));
 }
 
+export function getSettingsExperienceCopy(lang: Lang, role: string) {
+  const copy = getUiText(lang);
+  const isAdmin = role === 'Admin';
+
+  if (isAdmin) {
+    return {
+      page: copy.pageMeta.settings,
+      hero: {
+        eyebrow: copy.adminSettings.heroEyebrow,
+        title: copy.adminSettings.heroTitle,
+        note: copy.adminSettings.heroDesc,
+      },
+      showSystemSettings: true,
+      showManagedPasswords: true,
+    };
+  }
+
+  const personalCopy = lang === 'JP'
+    ? {
+        eyebrow: '// Personal security',
+        title: 'Account security',
+        note: 'Update your own password and keep access to your lab account secure.',
+      }
+    : lang === 'EN'
+      ? {
+          eyebrow: '// Personal security',
+          title: 'Account security',
+          note: 'Update your own password and keep access to your lab account secure.',
+        }
+      : {
+          eyebrow: '// B\u1ea3o m\u1eadt c\u00e1 nh\u00e2n',
+          title: 'B\u1ea3o m\u1eadt t\u00e0i kho\u1ea3n',
+          note: 'C\u1eadp nh\u1eadt m\u1eadt kh\u1ea9u c\u1ee7a b\u1ea1n v\u00e0 gi\u1eef t\u00e0i kho\u1ea3n lab lu\u00f4n an to\u00e0n.',
+        };
+
+  return {
+    page: personalCopy,
+    hero: personalCopy,
+    showSystemSettings: false,
+    showManagedPasswords: false,
+  };
+}
+
+export function getJobDetailExperience(lang: Lang, role: string) {
+  void lang;
+  void role;
+
+  return {
+    visibleTabs: ['overview', 'timeline', 'files'],
+    showPaymentPanel: false,
+    showMessagesPanel: false,
+  };
+}
+

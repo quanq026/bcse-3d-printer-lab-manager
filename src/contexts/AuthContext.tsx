@@ -8,7 +8,7 @@ interface AuthContextType {
   currentUser: User | null;
   role: Role;
   login: (user: User) => void;
-  logout: () => void;
+  logout: (notice?: string) => void;
   loading: boolean;
 }
 
@@ -48,10 +48,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoggedIn(true);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback((notice?: string) => {
     localStorage.removeItem('lab_token');
+    if (notice) {
+      sessionStorage.setItem('lab_auth_notice', notice);
+    } else {
+      sessionStorage.removeItem('lab_auth_notice');
+    }
     setIsLoggedIn(false);
     setCurrentUser(null);
+    setRole(Role.STUDENT);
   }, []);
 
   return (

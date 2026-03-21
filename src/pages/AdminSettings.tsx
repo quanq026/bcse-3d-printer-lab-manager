@@ -4,7 +4,7 @@ import { AppIcon } from '../components/AppIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { useLang } from '../contexts/LanguageContext';
 import { api } from '../lib/api';
-import { getUiText } from '../lib/uiText';
+import { getSettingsExperienceCopy, getUiText } from '../lib/uiText';
 import type { AdminUser } from '../types';
 import { Role } from '../types';
 
@@ -27,11 +27,12 @@ function SettingField({ label, hint, icon, children }: { label: string; hint: st
 
 export const AdminSettings: React.FC = () => {
   const { lang } = useLang();
-  const { role, currentUser } = useAuth();
+  const { role, currentUser, logout } = useAuth();
   const text = getUiText(lang);
   const copy = text.adminSettings;
   const shared = text.shared;
   const isAdmin = role === Role.ADMIN;
+  const settingsExperience = getSettingsExperienceCopy(lang, role);
 
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [staffAccounts, setStaffAccounts] = useState<AdminUser[]>([]);
@@ -72,7 +73,7 @@ export const AdminSettings: React.FC = () => {
         confirmPasswordHint: 'Repeat the new password once more to avoid accidental changes.',
         save: 'Change my password',
         mismatch: 'Confirmation password does not match.',
-        success: 'Your password has been updated.',
+        success: 'Your password has been updated. Please sign in again with the new password.',
       }
     : lang === 'EN'
       ? {
@@ -87,7 +88,7 @@ export const AdminSettings: React.FC = () => {
           confirmPasswordHint: 'Repeat the new password once more to avoid accidental changes.',
           save: 'Change my password',
           mismatch: 'Confirmation password does not match.',
-          success: 'Your password has been updated.',
+          success: 'Your password has been updated. Please sign in again with the new password.',
         }
       : {
           eyebrow: '// Tài khoản của tôi',
@@ -117,7 +118,7 @@ export const AdminSettings: React.FC = () => {
         confirmPasswordHint: 'Repeat the new password once to avoid accidental resets.',
         noAccounts: 'No Admin or Moderator accounts are available.',
         save: 'Update password',
-        success: 'Password updated successfully.',
+        success: 'Password updated successfully. The selected account will need to sign in again.',
         mismatch: 'Confirmation password does not match.',
         placeholder: 'Choose an Admin or Moderator account',
       }
@@ -134,7 +135,7 @@ export const AdminSettings: React.FC = () => {
           confirmPasswordHint: 'Repeat the new password once to avoid accidental resets.',
           noAccounts: 'No Admin or Moderator accounts are available.',
           save: 'Update password',
-          success: 'Password updated successfully.',
+          success: 'Password updated successfully. The selected account will need to sign in again.',
           mismatch: 'Confirmation password does not match.',
           placeholder: 'Choose an Admin or Moderator account',
         }
@@ -210,10 +211,9 @@ export const AdminSettings: React.FC = () => {
 
     setSelfSaving(true);
     try {
-      await api.changeOwnPassword(selfPasswordForm.currentPassword, selfPasswordForm.newPassword);
-      setSelfSuccess(selfPasswordCopy.success);
-      setSelfPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setTimeout(() => setSelfSuccess(''), 3000);
+        await api.changeOwnPassword(selfPasswordForm.currentPassword, selfPasswordForm.newPassword);
+        setSelfPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        logout(selfPasswordCopy.success);
     } catch (err: unknown) {
       setSelfError(err instanceof Error ? err.message : copy.loading);
     } finally {
@@ -259,23 +259,31 @@ export const AdminSettings: React.FC = () => {
       <section className="app-panel app-hover-box relative overflow-hidden rounded-[32px] px-5 py-6 sm:px-8 sm:py-8">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
           <div className="space-y-3">
-            <p className="app-eyebrow">{copy.heroEyebrow}</p>
+            <p className="app-eyebrow">{settingsExperience.hero.eyebrow}</p>
             <h1 className="app-display-sm text-slate-900 dark:text-[var(--landing-text)]">
-              {isAdmin ? copy.heroTitle : selfPasswordCopy.title}
+              {settingsExperience.hero.title}
             </h1>
             <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-[var(--landing-muted)]">
               {isAdmin ? copy.heroDesc : `${currentUser?.fullName || shared.userLabel} · ${currentUser?.email || ''}`}
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {Object.values(copy.stats).map((stat) => (
-              <div key={stat.label} className="app-hover-box app-metric-card rounded-[26px]">
-                <p className="app-metric-card-label">{stat.label}</p>
-                <p className="mt-4 app-metric-card-value text-[clamp(1.7rem,2.6vw,2.3rem)]">{stat.value}</p>
-                <p className="app-metric-card-note">{stat.note}</p>
-              </div>
-            ))}
-          </div>
+          {isAdmin ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Object.values(copy.stats).map((stat) => (
+                <div key={stat.label} className="app-hover-box app-metric-card rounded-[26px]">
+                  <p className="app-metric-card-label">{stat.label}</p>
+                  <p className="mt-4 app-metric-card-value text-[clamp(1.7rem,2.6vw,2.3rem)]">{stat.value}</p>
+                  <p className="app-metric-card-note">{stat.note}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="app-panel-soft rounded-[26px] px-5 py-5">
+              <p className="app-overline">{shared.userLabel}</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-[var(--landing-text)]">{currentUser?.fullName || shared.userLabel}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-[var(--landing-muted)]">{currentUser?.email || ''}</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -328,6 +336,7 @@ export const AdminSettings: React.FC = () => {
             <input type="password" value={selfPasswordForm.confirmPassword} onChange={(event) => setSelfPasswordValue('confirmPassword', event.target.value)} placeholder="Repeat new password" className="app-control rounded-[18px]" />
           </SettingField>
         </div>
+        <p className="mt-4 text-xs leading-6 text-slate-500 dark:text-[var(--landing-muted)]">{selfPasswordCopy.newPasswordHint}</p>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
@@ -405,6 +414,7 @@ export const AdminSettings: React.FC = () => {
                     <input type="password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordValue('confirmPassword', event.target.value)} placeholder="Admin@202444" className="app-control rounded-[18px]" />
                   </SettingField>
                 </div>
+                <p className="mt-4 text-xs leading-6 text-slate-500 dark:text-[var(--landing-muted)]">{managedPasswordCopy.newPasswordHint}</p>
 
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <button

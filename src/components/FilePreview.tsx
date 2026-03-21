@@ -140,6 +140,7 @@ function STLViewer({ buffer }: { buffer: ArrayBuffer }) {
 export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }) => {
   const { lang } = useLang();
   const copy = getUiText(lang);
+  const unavailableMessage = copy.filePreview.unavailable;
   const [state, setState] = useState<'loading' | 'stl' | 'img' | 'error'>('loading');
   const [stlBuffer, setStlBuffer] = useState<ArrayBuffer | null>(null);
   const [imgSrc, setImgSrc] = useState<string | null>(null);
@@ -190,13 +191,13 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }
           if (!cancelled) setState('error');
         }
       } catch (e: unknown) {
-        if (!cancelled) { setErrorMsg(e instanceof Error ? e.message : copy.filePreview.unavailable); setState('error'); }
+        if (!cancelled) { setErrorMsg(e instanceof Error ? e.message : unavailableMessage); setState('error'); }
       }
     };
 
     load();
     return () => { cancelled = true; };
-  }, [file]);
+  }, [file, unavailableMessage]);
 
   // Cleanup object URL
   useEffect(() => {
@@ -245,7 +246,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ file, className = '' }
     <div className={containerClass}>
       <div className="flex flex-col items-center gap-2 text-slate-400">
         <Box size={32} strokeWidth={1} />
-        <span className="text-xs text-center px-2">{errorMsg || copy.filePreview.unavailable}</span>
+        <span className="text-xs text-center px-2">{errorMsg || unavailableMessage}</span>
       </div>
     </div>
   );

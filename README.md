@@ -56,6 +56,25 @@ npm run dev
 
 Frontend mặc định chạy ở `http://localhost:5173`.
 
+## Quality Gate
+
+Chạy bộ kiểm tra cơ bản trước khi merge hoặc deploy:
+
+```bash
+npm run lint
+npm run test
+npx tsc --noEmit
+npm run build
+```
+
+Ghi chú:
+
+- `npm run lint` cần pass sạch trước khi merge.
+- `npm run test` chạy toàn bộ test trong thư mục `tests/`.
+- `npm run start` đã dùng được theo kiểu cross-platform cho production local.
+- `npm run clean` dùng `rimraf`, không còn phụ thuộc `rm -rf`.
+- Checklist manual theo role nằm ở [docs/role-smoke-checklist.md](docs/role-smoke-checklist.md).
+
 ## Biến môi trường
 
 Xem mẫu đầy đủ trong `.env.example`.
@@ -70,6 +89,24 @@ Biến quan trọng:
 - `LOG_LEVEL`: `error | warn | info | debug`
 - `SEED_ADMIN_PASSWORD` / `SEED_MOD_PASSWORD`: dùng để tạo tài khoản admin/mod khi DB còn rỗng
 - `SYNC_SEED_PASSWORDS=true`: đồng bộ lại mật khẩu admin/mod từ `.env` cho DB đã tồn tại trong lúc khởi động
+
+## Đổi mật khẩu trong ứng dụng
+
+- Student và Moderator có thể đổi mật khẩu của chính mình trong tab `Thiết lập`.
+- Admin có thể đổi mật khẩu của chính mình, đồng thời đổi mật khẩu cho tài khoản `Admin` hoặc `Moderator` khác trong tab `Thiết lập`.
+- Sau khi tự đổi mật khẩu, phiên đăng nhập hiện tại sẽ bị đăng xuất và token cũ không còn hợp lệ.
+
+## Release readiness
+
+Trước khi coi bản build là sẵn sàng ship, hãy kiểm tra đủ các điều kiện sau:
+
+- `npm run lint`
+- `npm run test`
+- `npx tsc --noEmit`
+- `npm run build`
+- Chạy checklist theo role trong [docs/role-smoke-checklist.md](docs/role-smoke-checklist.md)
+- Xác nhận Student, Moderator, Admin đều đổi mật khẩu đúng quyền
+- Xác nhận các màn hình đã harden không còn dùng browser `alert()` hoặc `confirm()`
 
 ## Đổi mật khẩu admin/mod bằng `.env`
 

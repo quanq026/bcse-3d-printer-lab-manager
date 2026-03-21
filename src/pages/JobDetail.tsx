@@ -182,10 +182,13 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, onBack }) => {
         </div>
       )}
 
-      <div className="app-tab-strip">
+      <div className="app-tab-strip" role="tablist" aria-label={copy.jobDetail.detailTitle}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
               'app-tab-button relative flex flex-1 items-center justify-center gap-2 sm:flex-none',

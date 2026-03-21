@@ -311,13 +311,16 @@ export const AdminUsers: React.FC = () => {
               <h1 className="app-display-sm max-w-4xl text-slate-900 dark:text-[var(--landing-text)]">{copy.heroTitle}</h1>
               <p className="max-w-3xl text-sm leading-7 text-slate-600 dark:text-[var(--landing-muted)]">{copy.heroDesc}</p>
             </div>
-            <div className="app-tab-strip rounded-[26px]">
+            <div className="app-tab-strip rounded-[26px]" role="tablist" aria-label={copy.heroTitle}>
               {([
                 ['users', copy.tabs.users],
                 ['warnings', copy.tabs.warnings],
               ] as const).map(([tab, label]) => (
                 <button
                   key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn('app-tab-button rounded-[20px]', activeTab === tab && 'is-active')}
                 >

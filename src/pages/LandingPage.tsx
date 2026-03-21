@@ -268,22 +268,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           </div>
 
           <div className="landing-auth-header">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={tab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                <h2 id="auth-title" className="landing-auth-title">
-                  {tab === 'login' ? t('welcome') : t('registerTitle')}
-                </h2>
-                <p className="landing-auth-subtitle">
-                  {tab === 'login' ? t('loginSubtitle') : t('registerSubtitle')}
-                </p>
-              </motion.div>
-            </AnimatePresence>
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+            >
+              <h2 id="auth-title" className="landing-auth-title">
+                {tab === 'login' ? t('welcome') : t('registerTitle')}
+              </h2>
+              <p className="landing-auth-subtitle">
+                {tab === 'login' ? t('loginSubtitle') : t('registerSubtitle')}
+              </p>
+            </motion.div>
           </div>
 
           <div className="landing-auth-tabs" role="tablist" aria-labelledby="auth-title">
@@ -340,16 +337,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
             )}
           </AnimatePresence>
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {tab === 'login' ? (
-                <form onSubmit={handleLogin} className="landing-auth-form">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.22 }}
+          >
+            {tab === 'login' ? (
+              <form onSubmit={handleLogin} className="landing-auth-form">
                   <Field label={t('email')}>
                     <input
                       type="email"
@@ -388,9 +383,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                   </Field>
 
                   <SubmitBtn loading={loading} label={t('login')} />
-                </form>
-              ) : (
-                <form onSubmit={handleRegister} className="landing-auth-form">
+              </form>
+            ) : (
+              <form onSubmit={handleRegister} className="landing-auth-form">
                   <div className="landing-form-grid">
                     <Field label={t('fullName')}>
                       <input
@@ -503,10 +498,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     label={t('register')}
                     disabled={(!!email && !VJU_REGEX.test(email)) || (!!confirmPass && confirmPass !== password)}
                   />
-                </form>
-              )}
-            </motion.div>
-          </AnimatePresence>
+              </form>
+            )}
+          </motion.div>
         </motion.div>
       </section>
     </main>

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { ArrowLeft, ChevronDown, Loader2, Menu } from 'lucide-react';
 import { LanguageToggle } from './components/LanguageToggle';
 import { Sidebar } from './components/Sidebar';
@@ -7,9 +7,9 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { useAuth } from './contexts/AuthContext';
 import { useLang } from './contexts/LanguageContext';
 import { api } from './lib/api';
+import { createNavigationIntentState, failRequestedJob, requestJobIntent, requestPageIntent, resolveRequestedJob } from './lib/navigationIntent';
 import { fillText, getSettingsExperienceCopy, getUiText } from './lib/uiText';
 import { LandingPage } from './pages/LandingPage';
-import type { PrintJob } from './types';
 import { Role } from './types';
 
 const StudentDashboard = lazy(() => import('./pages/StudentDashboard').then((module) => ({ default: module.StudentDashboard })));
@@ -42,52 +42,46 @@ export default function App() {
   const { lang } = useLang();
   const copy = getUiText(lang);
   const { isLoggedIn, currentUser, role, login, logout, loading } = useAuth();
-  const [activePage, setActivePage] = useState('dashboard');
-  const [selectedJob, setSelectedJob] = useState<PrintJob | null>(null);
+  const [navigation, setNavigation] = useState(() => createNavigationIntentState('dashboard'));
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [headerMetaOpen, setHeaderMetaOpen] = useState(false);
 
   const handleLogin = (user: Parameters<typeof login>[0]) => {
     login(user);
-    React.startTransition(() => {
-      setActivePage('dashboard');
-    });
+    setNavigation(createNavigationIntentState('dashboard'));
     setMobileSidebarOpen(false);
     setHeaderMetaOpen(false);
   };
 
   const handleLogout = () => {
     logout();
-    React.startTransition(() => {
-      setSelectedJob(null);
-      setActivePage('dashboard');
-    });
+    setNavigation(createNavigationIntentState('dashboard'));
     setMobileSidebarOpen(false);
     setHeaderMetaOpen(false);
   };
 
   const handlePageChange = (page: string) => {
-    React.startTransition(() => {
-      setActivePage(page);
-    });
+    setNavigation((previous) => requestPageIntent(previous, page));
     setMobileSidebarOpen(false);
     setHeaderMetaOpen(false);
   };
 
   const navigateToJob = async (id: string) => {
+    let requestId = 0;
+
+    setNavigation((previous) => {
+      const next = requestJobIntent(previous, id);
+      requestId = next.jobRequestId;
+      return next;
+    });
+    setMobileSidebarOpen(false);
+    setHeaderMetaOpen(false);
+
     try {
       const job = await api.getJob(id);
-      React.startTransition(() => {
-        setSelectedJob(job);
-        setActivePage('job-detail');
-      });
+      setNavigation((previous) => resolveRequestedJob(previous, requestId, job));
     } catch {
-      React.startTransition(() => {
-        setSelectedJob(null);
-        setActivePage('job-detail');
-      });
-    } finally {
-      setMobileSidebarOpen(false);
+      setNavigation((previous) => failRequestedJob(previous, requestId));
     }
   };
 
@@ -99,17 +93,17 @@ export default function App() {
     return <LandingPage onLogin={handleLogin} />;
   }
 
-  const currentMeta = activePage === 'job-detail' && selectedJob
+  const currentMeta = navigation.activePage === 'job-detail' && navigation.selectedJob
     ? {
         eyebrow: copy.pageMeta['job-detail'].eyebrow,
-        title: selectedJob.jobName || copy.pageMeta['job-detail'].title,
-        note: selectedJob.id
-          ? fillText(copy.shared.jobDetailSelectedNote, { id: selectedJob.id })
+        title: navigation.selectedJob.jobName || copy.pageMeta['job-detail'].title,
+        note: navigation.selectedJob.id
+          ? fillText(copy.shared.jobDetailSelectedNote, { id: navigation.selectedJob.id })
           : copy.pageMeta['job-detail'].note,
       }
-    : activePage === 'settings'
+    : navigation.activePage === 'settings'
       ? getSettingsExperienceCopy(lang, role).page
-    : (copy.pageMeta as Record<string, { eyebrow: string; title: string; note: string }>)[activePage] || copy.pageMeta.dashboard;
+      : (copy.pageMeta as Record<string, { eyebrow: string; title: string; note: string }>)[navigation.activePage] || copy.pageMeta.dashboard;
 
   const roleCopy = {
     [Role.STUDENT]: copy.roles.studentSpace,
@@ -121,7 +115,7 @@ export default function App() {
     : (headerMetaOpen ? 'Ẩn bảng nhanh' : 'Hiện bảng nhanh');
 
   const renderPage = () => {
-    switch (activePage) {
+    switch (navigation.activePage) {
       case 'dashboard':
         return <StudentDashboard activePage="dashboard" onNewBooking={() => handlePageChange('booking')} onSelectJob={navigateToJob} onPageChange={handlePageChange} role={role} currentUser={currentUser} />;
       case 'booking':
@@ -149,8 +143,10 @@ export default function App() {
       case 'queue-status':
         return <QueuePage currentUser={currentUser} />;
       case 'job-detail':
-        return selectedJob ? (
-          <JobDetail job={selectedJob} onBack={() => handlePageChange('dashboard')} />
+        return navigation.pendingJobId ? (
+          <PageLoader />
+        ) : navigation.selectedJob ? (
+          <JobDetail job={navigation.selectedJob} onBack={() => handlePageChange('dashboard')} />
         ) : (
           <div className="app-panel flex min-h-[240px] items-center justify-center px-6 py-12 text-sm text-slate-500 dark:text-[var(--landing-muted)]">
             {copy.shared.pageLoadFailed}
@@ -172,7 +168,7 @@ export default function App() {
       <div className="relative z-10 flex min-h-screen w-full flex-1">
         <Sidebar
           role={role}
-          activePage={activePage}
+          activePage={navigation.activePage}
           onPageChange={handlePageChange}
           onLogout={handleLogout}
           currentUser={currentUser}
@@ -193,7 +189,7 @@ export default function App() {
                     >
                       <Menu size={18} />
                     </button>
-                    {activePage !== 'dashboard' && (
+                    {navigation.activePage !== 'dashboard' && (
                       <button
                         onClick={() => handlePageChange('dashboard')}
                         className="app-icon-button inline-flex h-11 w-11 items-center justify-center"
@@ -253,19 +249,16 @@ export default function App() {
           </header>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 pt-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
-            <Suspense fallback={<PageLoader />}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activePage + (selectedJob?.id || '')}
-                  initial={{ opacity: 0, y: 12, scale: 0.995 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.995 }}
-                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                  className="h-full"
-                >
-                  {renderPage()}
-                </motion.div>
-              </AnimatePresence>
+            <Suspense fallback={<PageLoader key={`${navigation.activePage}-${navigation.pendingJobId ?? 'idle'}`} />}>
+              <motion.div
+                key={navigation.activePage + (navigation.selectedJob?.id || navigation.pendingJobId || '')}
+                initial={{ opacity: 0, y: 12, scale: 0.995 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="h-full"
+              >
+                {renderPage()}
+              </motion.div>
             </Suspense>
           </div>
         </main>

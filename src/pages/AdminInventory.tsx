@@ -83,8 +83,24 @@ export const AdminInventory: React.FC = () => {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [newItem, setNewItem] = useState<InventoryDraft>(emptyNew());
+  const [colorMode, setColorMode] = useState<'preset' | 'custom'>('custom');
   const { toast, dismissToast, showError, showSuccess } = useToast();
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const isPresetColor = COLOR_PRESET_VALUES.includes(newItem.color as (typeof COLOR_PRESET_VALUES)[number]);
+  const isCustomColor = colorMode === 'custom';
+
+  const closeAddForm = () => {
+    setShowAdd(false);
+    setNewItem(emptyNew());
+    setColorMode('custom');
+  };
+
+  const openAddForm = () => {
+    setShowAdd(true);
+    setNewItem(emptyNew());
+    setColorMode('custom');
+  };
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -156,8 +172,7 @@ export const AdminInventory: React.FC = () => {
     try {
       await api.addInventory(newItem);
       await fetchInventory();
-      setShowAdd(false);
-      setNewItem(emptyNew());
+      closeAddForm();
       showSuccess(copy.saveReel);
     } catch (err: unknown) {
       showError(err instanceof Error ? err.message : 'Unknown error');
@@ -219,7 +234,7 @@ export const AdminInventory: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-3">
               <button onClick={fetchInventory} className="app-secondary-button inline-flex min-h-[48px] items-center justify-center gap-2 rounded-[18px] px-5 text-sm font-bold"><RefreshCw size={16} />{copy.refresh}</button>
-              <button onClick={() => setShowAdd((current) => !current)} className="app-primary-button inline-flex min-h-[48px] items-center justify-center gap-2 rounded-[18px] px-5 text-sm font-bold"><Plus size={16} />{showAdd ? copy.closeAdd : copy.add}</button>
+              <button onClick={() => { if (showAdd) { closeAddForm(); } else { openAddForm(); } }} className="app-primary-button inline-flex min-h-[48px] items-center justify-center gap-2 rounded-[18px] px-5 text-sm font-bold"><Plus size={16} />{showAdd ? copy.closeAdd : copy.add}</button>
             </div>
           </div>
 
@@ -267,11 +282,15 @@ export const AdminInventory: React.FC = () => {
               <span className="app-overline">{copy.color}</span>
               <div className="flex flex-wrap gap-2">
                 {COLOR_PRESETS.map((color) => {
-                  const isActive = newItem.color === color.value;
+                  const isActive = !isCustomColor && newItem.color === color.value;
                   return (
                     <button
                       key={color.value}
-                      onClick={() => setNewItem({ ...newItem, color: color.value })}
+                      type="button"
+                      onClick={() => {
+                        setColorMode('preset');
+                        setNewItem({ ...newItem, color: color.value });
+                      }}
                       title={color.label}
                       className={cn(
                         "group relative flex h-10 w-10 items-center justify-center rounded-full border transition-all",
@@ -293,11 +312,13 @@ export const AdminInventory: React.FC = () => {
                   );
                 })}
                 <button
-                  onClick={() => setNewItem({ ...newItem, color: '' })}
+                  type="button"
+                  aria-pressed={isCustomColor}
+                  onClick={() => setColorMode('custom')}
                   className={cn(
                     "flex min-h-[40px] items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-all",
-                    !COLOR_PRESET_VALUES.includes(newItem.color as any) && newItem.color !== '' 
-                      ? "border-[var(--landing-accent)] bg-[rgba(239,125,87,0.12)] text-[var(--landing-accent)]" 
+                    isCustomColor
+                      ? "border-[var(--landing-accent)] bg-[rgba(239,125,87,0.12)] text-[var(--landing-accent)]"
                       : "border-slate-200 hover:border-slate-300 dark:border-white/10 dark:hover:border-white/20"
                   )}
                 >
@@ -305,11 +326,11 @@ export const AdminInventory: React.FC = () => {
                   {copy.customColor}
                 </button>
               </div>
-              {(!COLOR_PRESET_VALUES.includes(newItem.color as any) || newItem.color === '') && (
+              {isCustomColor && (
                 <div className="mt-2">
                   <input
                     type="text"
-                    value={newItem.color}
+                    value={isPresetColor ? '' : newItem.color}
                     onChange={(event) => setNewItem({ ...newItem, color: event.target.value })}
                     placeholder={copy.customColorPlaceholder}
                     className="app-control rounded-[18px]"
@@ -323,7 +344,7 @@ export const AdminInventory: React.FC = () => {
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button onClick={handleAdd} disabled={saving} className="app-primary-button inline-flex min-h-[50px] items-center justify-center gap-2 rounded-[18px] px-5 text-sm font-bold disabled:opacity-60">{saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}{copy.saveReel}</button>
-            <button onClick={() => setShowAdd(false)} className="app-secondary-button inline-flex min-h-[50px] items-center justify-center rounded-[18px] px-5 text-sm font-bold">{copy.collapseForm}</button>
+            <button onClick={closeAddForm} className="app-secondary-button inline-flex min-h-[50px] items-center justify-center rounded-[18px] px-5 text-sm font-bold">{copy.collapseForm}</button>
           </div>
         </section>
       )}
